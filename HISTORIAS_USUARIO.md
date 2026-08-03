@@ -123,6 +123,7 @@ qué calidad.
 precio, comprador, si ya se cobró — para saber a cuánto se vendió y no depender de la memoria al
 momento de liquidar.
 - Criterios: un ciclo puede tener varias ventas (no es una cosecha única al final).
+  
 
 ---
 
