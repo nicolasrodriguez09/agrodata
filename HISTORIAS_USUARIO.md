@@ -16,124 +16,160 @@ y en PC.
   Un crédito anterior lo sacaron mostrando facturas en papel ante un auditor — el sistema los
   calificaría de 1 a 10 según qué tan organizados estén los registros ("fin agro").
 - **Necesitan**: buscadores con filtros (jornales, aplicaciones, facturas), fotos de factura,
-  separación de todo por ciclo de cosecha, y a futuro posible integración/exportación a Excel.
+  separación de todo por ciclo, y a futuro posible integración/exportación a Excel.
+- **Riego/lluvia**: descartado por ahora, no se incluye en esta versión.
+
+## Decisión de modelo: qué es un "ciclo"
+
+Guayaba (y frutales en general) es un cultivo **perenne**: el árbol no se resiembra cada cosecha,
+produce varias veces al año. Por eso un "ciclo" acá **no es el ciclo biológico de la planta**, es
+un **período contable que el usuario abre y cierra a su criterio** (ej. "Ciclo 2026-1"), usado para
+agrupar aplicaciones, jornales, compras y ventas de un lote y así poder calcular cuánto se ganó en
+esa ventana. Un lote puede tener varias ventas dentro del mismo ciclo (no una única cosecha final).
+Esta definición es la base de todo el modelo de datos.
+
+## Decisión de alcance: sin inventario de insumos
+
+No se va a llevar stock/bodega de insumos en esta versión (cuánto queda de cada producto). Cada
+compra se registra como gasto asociado a un lote/ciclo, y cada aplicación se registra por
+trazabilidad (qué se aplicó, cuánto, cuándo) — sin descontar de un inventario. Es la diferencia
+entre un sistema simple que resuelve el problema real (saber cuánto gastaron y qué aplicaron) y uno
+complejo (control de bodega) que hoy no hace falta. Se puede agregar más adelante si surge la
+necesidad.
 
 ---
 
-## Épica 1 — Fincas y Lotes
+## Estructura general de la app (navegación)
 
-**HU-1.1** Como usuario administrador, quiero registrar una finca (nombre, ubicación) para agrupar
-los lotes que le pertenecen.
-- Criterios: crear/editar/eliminar finca; nombre obligatorio; lista de fincas visible.
+1. **Pantalla de inicio**: listado de lotes (agrupados por finca).
+2. **Entrar a un lote**: se ve su info general (finca, tamaño/área, cantidad de árboles o plantas)
+   y se selecciona el **ciclo activo** (o uno histórico, para consulta).
+3. **Dentro del lote + ciclo seleccionado**: acciones rápidas predeterminadas —
+   registrar aplicación de insumo/químico, registrar cosecha, registrar venta, registrar jornal de
+   ese lote.
+4. Aparte, un **módulo de Finanzas** con las mismas compras/pagos pero vistos de forma
+   centralizada (todas las compras de insumos juntas, todos los pagos de jornales juntos), útil
+   para revisar y auditar sin tener que entrar lote por lote.
+5. Y un **Panel Administrativo** con gráficas, rentabilidad por lote y búsqueda global.
 
-**HU-1.2** Como usuario administrador, quiero registrar un lote dentro de una finca (o sin finca,
-para los lotes sueltos), indicando cultivo actual y cantidad de árboles, para tener identificado
-cada lote individualmente.
-- Criterios: CRUD completo; lote puede quedar sin finca asociada; campo cultivo y N° de árboles.
-
-**HU-1.3** Como usuario, quiero ver un listado/mapa simple de todos mis lotes agrupados por finca,
-para recorrerlos y saber cuáles tengo y dónde están.
-- Criterios: vista agrupada por finca + sección aparte para lotes sueltos.
+Esto da dos formas de llegar al mismo dato: **por lote** (mientras estás en el campo, rápido) y
+**por módulo financiero** (para revisar/auditar todo junto).
 
 ---
 
-## Épica 2 — Aplicación de Productos (fertilizantes/agroquímicos)
+## Épica 1 — Fincas y Lotes (datos base)
 
-**HU-2.1** Como usuario, quiero registrar una aplicación de producto en un lote (producto, dosis,
-fecha, cantidad, costo) para no depender de la memoria de quien la hizo.
-- Criterios: selección de lote, fecha, producto, dosis, cantidad aplicada, costo; queda vinculada
-  al ciclo de cosecha activo del lote.
+**HU-1.1** Como usuario, quiero registrar una finca (nombre, ubicación) para agrupar los lotes que
+le pertenecen.
+- Criterios: CRUD; nombre obligatorio; listado de fincas.
 
-**HU-2.2** Como usuario, quiero ver el historial de aplicaciones de un lote ordenado por fecha,
+**HU-1.2** Como usuario, quiero registrar un lote dentro de una finca (o suelto, sin finca),
+indicando cultivo actual, **tamaño/área** y **cantidad total de árboles o plantas sembradas**, para
+tener cada lote identificado con su información real.
+- Criterios: CRUD completo; lote puede no tener finca asociada; campos cultivo, área (con unidad,
+  ej. hectáreas), N° de árboles/plantas.
+
+**HU-1.3** Como usuario, al abrir la app quiero ver primero el listado de todos mis lotes agrupados
+por finca, para elegir con cuál quiero trabajar.
+- Criterios: pantalla de inicio = listado de lotes; agrupados por finca + sección de lotes sueltos;
+  acceso directo a cada lote desde ahí.
+
+---
+
+## Épica 2 — Ciclos por Lote
+
+**HU-2.1** Como usuario, quiero crear un ciclo dentro de un lote (con fecha de inicio, nombre o
+identificador), para agrupar bajo ese ciclo todo lo que pase en el lote durante ese período.
+- Criterios: un lote puede tener varios ciclos a lo largo del tiempo (históricos); el usuario decide
+  cuándo abre y cierra un ciclo, no hay fecha de cierre automática.
+
+**HU-2.2** Como usuario, al entrar a un lote quiero que se me muestre su **ciclo activo** primero
+(y poder cambiar a un ciclo histórico si quiero consultarlo), para no confundir datos de distintos
+períodos.
+- Criterios: un lote tiene como máximo un ciclo activo a la vez; selector de ciclo dentro del lote.
+
+**HU-2.3** Como usuario, quiero ver dentro de un ciclo un resumen de: tamaño del lote, árboles/
+plantas, total aplicado, total gastado, total cosechado, total vendido y balance, para tener el
+panorama completo de ese lote en ese período sin salir de la pantalla.
+
+---
+
+## Épica 3 — Módulo de Rastreo: Aplicaciones
+
+**HU-3.1** Como usuario, quiero registrar desde el lote (dentro del ciclo activo) una aplicación de
+insumo o químico — producto, cantidad, fecha, quién la aplicó — para no depender de la memoria de
+quien la hizo.
+- Criterios: acción rápida desde la pantalla del lote; queda vinculada al lote + ciclo activo.
+
+**HU-3.2** Como usuario, quiero ver el historial de aplicaciones de un lote ordenado por fecha,
 para reconstruir la secuencia real de manejo del cultivo.
-- Criterios: listado filtrable por lote, por rango de fechas y por producto.
+- Criterios: listado dentro del lote, filtrable por fecha y por producto.
 
-**HU-2.3** Como usuario, quiero registrar quién aplicó el producto, para saber a quién preguntar
-si hay dudas y dejar de depender de "preguntarle a Emerson".
-- Criterios: campo de responsable/aplicador en cada registro.
-
-*(Futuro / no bloqueante para el MVP)* **HU-2.4** Días de carencia por producto y alerta si una
+*(Futuro / no bloqueante para el MVP)* **HU-3.3** Días de carencia por producto y alerta si una
 cosecha cae antes de cumplirse el plazo.
 
 ---
 
-## Épica 3 — Riego y Lluvia
+## Épica 4 — Módulo de Rastreo: Cosecha y Venta
 
-**HU-3.1** Como usuario, quiero registrar la cantidad de lluvia caída por finca/lote y fecha, para
-tener ese dato disponible junto con las aplicaciones y cosechas.
-- Criterios: registro simple fecha + mm de lluvia (o cualitativo si no hay pluviómetro) por finca.
+**HU-4.1** Como usuario, quiero registrar una cosecha desde el lote (dentro del ciclo activo) —
+fecha, cantidad, calidad/selección (ej. selecta vs. no selecta) — para saber cuánto se produjo y de
+qué calidad.
 
-**HU-3.2** *(Deseable, no crítico)* Como usuario, quiero registrar riegos realizados (fecha, lote,
-duración/cantidad), para llevar control de esa labor igual que las aplicaciones.
+**HU-4.2** Como usuario, quiero registrar una venta desde el lote — fecha, cantidad vendida (cajas),
+precio, comprador, si ya se cobró — para saber a cuánto se vendió y no depender de la memoria al
+momento de liquidar.
+- Criterios: un ciclo puede tener varias ventas (no es una cosecha única al final).
 
 ---
 
-## Épica 4 — Finanzas: Gastos y Facturas
+## Épica 5 — Módulo de Finanzas: Compras de Insumos
 
-**HU-4.1** Como usuario, quiero registrar un gasto (fecha, valor, persona que compró, insumo
-comprado, proveedor/dónde se compró) para tener el costo real de cada insumo.
-- Criterios: todos los campos mencionados; asociado a un lote/ciclo cuando aplique.
+**HU-5.1** Como usuario, quiero registrar una compra de insumo — qué producto, costo, fecha,
+proveedor/dónde se compró — asociada a un lote y ciclo, para tener el costo real de cada insumo.
 
-**HU-4.2** Como usuario, quiero adjuntar una foto de la factura a cada gasto, para tener respaldo
+**HU-5.2** Como usuario, quiero adjuntar una foto de la factura a cada compra, para tener respaldo
 documental igual al que mostraron en el crédito anterior.
-- Criterios: carga de imagen desde cámara o galería; visible al abrir el detalle del gasto.
+- Criterios: carga de imagen desde cámara o galería; visible en el detalle de la compra.
 
-**HU-4.3** Como usuario, quiero ver un listado de gastos con buscador y filtros (por fecha, por
-lote, por tipo de insumo), para encontrar cualquier factura rápido.
-
----
-
-## Épica 5 — Finanzas: Pagos a Trabajadores (Jornales)
-
-**HU-5.1** Como usuario, quiero registrar el pago a un trabajador (persona, labor realizada,
-jornales/horas, valor, quién pagó, quién recibió, fecha) para no perder el registro de la mano de
-obra.
-- Criterios: todos los campos; estado pagado/pendiente.
-
-**HU-5.2** Como usuario, quiero filtrar y buscar pagos de jornales por trabajador, por lote y por
-rango de fechas, para revisar cuánto se le ha pagado a cada persona.
+**HU-5.3** Como usuario, quiero ver todas las compras de insumos en un solo listado (módulo
+Finanzas), con buscador y filtros por fecha, lote y producto, para revisar o auditar sin entrar
+lote por lote.
 
 ---
 
-## Épica 6 — Cosechas y Ciclos
+## Épica 6 — Módulo de Finanzas: Pagos de Jornales
 
-**HU-6.1** Como usuario, quiero crear un ciclo de cosecha para un lote (definido por mí, con fecha
-de inicio), para que todos los gastos, aplicaciones y jornales de ese período queden agrupados
-bajo ese ciclo.
-- Criterios: un lote puede tener ciclos históricos; el usuario decide cuándo abre/cierra un ciclo,
-  no es automático por fecha de calendario.
+**HU-6.1** Como usuario, quiero registrar el pago de un jornal — nombre de la persona, fecha, valor
+pagado, labor realizada — asociado a un lote y ciclo, para no perder el registro de la mano de obra.
+- Criterios: registrable tanto desde el lote (acción rápida) como desde el módulo Finanzas; estado
+  pagado/pendiente.
 
-**HU-6.2** Como usuario, quiero registrar la cosecha de un ciclo (cantidad, selección/calidad —
-ej. guayaba selecta vs. no selecta, cajas), para saber cuánto se produjo y de qué calidad.
-
-**HU-6.3** Como usuario, quiero registrar la venta de la cosecha (cajas vendidas, precio, comprador,
-fecha, si ya se cobró), para saber a cuánto se vendió y no depender de la memoria al momento de
-liquidar.
-
-**HU-6.4** Como usuario, quiero ver el balance de un ciclo (total gastado en insumos + jornales vs.
-total vendido) para saber cuánto gané y cuánto sobró en cada cosecha.
-- Este es el número que hoy no pueden calcular — es el corazón del sistema.
+**HU-6.2** Como usuario, quiero ver todos los pagos de jornales en un solo listado, con buscador y
+filtros por trabajador, lote y rango de fechas, para revisar cuánto se le ha pagado a cada persona.
 
 ---
 
-## Épica 7 — Panel Admin / Dashboard General
+## Épica 7 — Panel Administrativo / Dashboard
 
-**HU-7.1** Como usuario administrador, quiero un panel general con los datos separados por ciclo de
-cosecha seleccionado, para revisar pagos, gastos de insumos, riegos y cosechas de ese ciclo
-específico.
-- Criterios: selector de ciclo arriba; todas las secciones (gastos, jornales, aplicaciones, riego,
-  cosecha/venta) filtradas por ese ciclo.
+**HU-7.1** Como usuario, quiero un panel con gráficas dinámicas de gastos vs. ventas por lote y por
+ciclo, para ver de un vistazo si estoy ganando o perdiendo dinero.
 
-**HU-7.2** Como usuario, quiero buscadores con filtros combinados (por lote, por finca, por fecha,
-por tipo de registro) en jornales, aplicaciones y facturas, para encontrar información rápido sin
-recorrer todo.
+**HU-7.2** Como usuario, quiero ver la **rentabilidad de cada lote** (total vendido − total
+invertido en insumos y jornales, y el % de retorno), para saber qué lotes me convienen más y dónde
+estoy perdiendo plata.
+- Esta es la historia de mayor valor: hoy Freddy no puede calcular esto y es la razón principal del
+  proyecto.
 
-**HU-7.3** Como usuario, quiero una vista consolidada exportable/imprimible con todos los
-respaldos (facturas, pagos, aplicaciones) de un ciclo o período, para presentarla en una solicitud
-de crédito o ante un auditor.
-- Esta historia es la de mayor valor de negocio: es la razón principal del proyecto.
+**HU-7.3** Como usuario, quiero buscar y filtrar todos los registros (cosechas, ventas, pagos,
+compras, aplicaciones) por lote, finca, ciclo, fecha o persona, desde un solo lugar, para encontrar
+cualquier dato rápido sin recorrer lote por lote.
 
-**HU-7.4** *(Futuro)* Como usuario, quiero exportar los datos a Excel, para cruzarlos o respaldarlos
+**HU-7.4** Como usuario, quiero una vista consolidada exportable/imprimible con todos los respaldos
+(facturas, pagos, aplicaciones) de un ciclo o período, para presentarla en una solicitud de crédito
+o ante un auditor.
+
+**HU-7.5** *(Futuro)* Como usuario, quiero exportar los datos a Excel, para cruzarlos o respaldarlos
 fuera del sistema.
 
 ---
@@ -150,11 +186,21 @@ puedan iniciar sesión y cargar información, para mantener el control de quién
 
 | Prioridad | Épicas |
 |---|---|
-| **Must (MVP)** | 1 (Fincas/Lotes), 2.1-2.3 (Aplicaciones), 4 (Gastos+Facturas), 5 (Jornales), 6 (Ciclos/Cosecha/Venta/Balance), 8 (Acceso) |
-| **Should** | 7.1-7.2 (Dashboard filtrado y buscadores) |
-| **Could** | 3 (Lluvia/Riego), 7.3 (Vista para crédito/auditor) |
-| **Won't (por ahora)** | 2.4 (alertas de carencia), 7.4 (Excel) |
+| **Must (MVP)** | 1 (Fincas/Lotes), 2 (Ciclos), 3 (Aplicaciones), 4 (Cosecha/Venta), 5 (Compras+Factura), 6 (Jornales), 8 (Acceso) |
+| **Should** | 7.1-7.3 (Dashboard, rentabilidad, búsqueda global) |
+| **Could** | 7.4 (Vista para crédito/auditor) |
+| **Won't (por ahora)** | 3.3 (alertas de carencia), 7.5 (Excel), riego/lluvia |
 
-El balance por ciclo (HU-6.4) y el respaldo de facturas con foto (HU-4.2) son los dos puntos que
-más valor le dan al proyecto según lo que contó Freddy: hoy no saben cuánto ganan ni tienen cómo
-respaldar un crédito. Todo el resto del sistema existe para sostener esos dos números.
+El balance por ciclo (HU-2.3 / HU-7.2) y el respaldo de facturas con foto (HU-5.2) son los dos
+puntos que más valor le dan al proyecto: hoy no saben cuánto ganan ni tienen cómo respaldar un
+crédito. Todo el resto del sistema existe para sostener esos dos números.
+
+## Recomendaciones para más adelante (no MVP, pero vale tenerlas en mente)
+
+- **Duplicar aplicación en varios lotes el mismo día**: en el campo es común aplicar el mismo
+  producto en varios lotes seguidos — una acción de "aplicar a estos 3 lotes" ahorraría bastante
+  tiempo de carga frente a repetir el formulario 3 veces.
+- **Trazabilidad de quién registró cada dato**: con 2 usuarios ayuda a saber quién cargó qué,
+  útil si hay dudas sobre un registro.
+- **Cierre de ciclo con recordatorio**: avisar si un ciclo lleva mucho tiempo abierto sin ventas
+  registradas, para que no se queden ciclos "olvidados" sin cerrar.
