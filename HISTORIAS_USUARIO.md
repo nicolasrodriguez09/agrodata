@@ -103,6 +103,9 @@ quien la hizo.
 
 **HU-3.2** Como usuario, quiero ver el historial de aplicaciones de un lote ordenado por fecha,
 para reconstruir la secuencia real de manejo del cultivo.
+
+puede ser una muestra de calendario por colores. cada color significa una accion
+
 - Criterios: listado dentro del lote, filtrable por fecha y por producto.
 
 *(Futuro / no bloqueante para el MVP)* **HU-3.3** Días de carencia por producto y alerta si una
@@ -120,6 +123,7 @@ qué calidad.
 precio, comprador, si ya se cobró — para saber a cuánto se vendió y no depender de la memoria al
 momento de liquidar.
 - Criterios: un ciclo puede tener varias ventas (no es una cosecha única al final).
+  
 
 ---
 
