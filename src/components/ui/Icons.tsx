@@ -12,6 +12,39 @@ const base = {
   'aria-hidden': true,
 };
 
+export function IconChevronRight(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m9 5 7 7-7 7" />
+    </svg>
+  );
+}
+
+export function IconChevronDown(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m5 8 7 7 7-7" />
+    </svg>
+  );
+}
+
+export function IconSun(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.5v2.4M12 19.1v2.4M4.5 12H2.1M21.9 12h-2.4M5.4 5.4l1.7 1.7M16.9 16.9l1.7 1.7M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7" />
+    </svg>
+  );
+}
+
+export function IconMoon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconLeaf(props: IconProps) {
   return (
     <svg {...base} {...props}>

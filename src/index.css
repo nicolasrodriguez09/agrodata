@@ -1,5 +1,73 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: 'Big Shoulders Display';
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/big-shoulders-display-900.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Source Serif 4';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/source-serif-4-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Source Serif 4';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/source-serif-4-600.woff2') format('woff2');
+}
+
+:root {
+  --bg: #edf0e2;
+  --surface: #fbfaf2;
+  --text: #1b2a1f;
+  --text-dim: #5b6b57;
+  --border: #c9cbb6;
+  --header-bg: #16221a;
+  --header-text: #f4f5ea;
+  --gold: #c88a2e;
+  --gold-ink: #1b2a1f;
+  --recent: #1f4620;
+  --recent-text: #f2f5ea;
+  --mid: #9cc08b;
+  --mid-text: #1b2a1f;
+  --dormant: #d9d6c8;
+  --dormant-text: #57594b;
+  --nodata: #efeee4;
+  --nodata-text: #9a9a8c;
+  --nodata-border: #cfcfc0;
+  --sueltos: #78716c;
+}
+
+.dark {
+  --bg: #0e140d;
+  --surface: #182018;
+  --text: #ecefdf;
+  --text-dim: #98a38f;
+  --border: #303829;
+  --header-bg: #0a0f09;
+  --header-text: #ecefdf;
+  --gold: #e3ad52;
+  --gold-ink: #191307;
+  --recent: #3c7a3e;
+  --recent-text: #eef6e9;
+  --mid: #6e9a5d;
+  --mid-text: #0c130a;
+  --dormant: #383e31;
+  --dormant-text: #c6cab7;
+  --nodata: #171d15;
+  --nodata-text: #6c7565;
+  --nodata-border: #2a3124;
+  --sueltos: #a8a29e;
+}
+
 html,
 body,
 #root {
@@ -9,4 +77,13 @@ body,
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.font-display {
+  font-family: 'Big Shoulders Display', Impact, sans-serif;
+}
+.font-serif {
+  font-family: 'Source Serif 4', Georgia, 'Iowan Old Style', serif;
 }
