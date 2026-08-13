@@ -1,68 +1,177 @@
-import { Link, useParams } from 'react-router-dom';
-import Card from '../components/ui/Card';
-import Badge from '../components/ui/Badge';
-import { IconArrowLeft, IconDroplet, IconBasket, IconTag, IconUsers } from '../components/ui/Icons';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { escucharFincas } from '../lib/fincas';
+import { escucharLote, borrarLote } from '../lib/lotes';
+import type { Finca, Lote } from '../types/models';
+import FormularioLote from '../components/FormularioLote';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import {
+  IconArrowLeft,
+  IconDroplet,
+  IconBasket,
+  IconTag,
+  IconUsers,
+  IconPencil,
+  IconTrash,
+} from '../components/ui/Icons';
 
 const acciones = [
-  { label: 'Aplicación de insumo', Icon: IconDroplet, tono: 'text-green-700 bg-green-50' },
-  { label: 'Registrar cosecha', Icon: IconBasket, tono: 'text-amber-700 bg-amber-50' },
-  { label: 'Registrar venta', Icon: IconTag, tono: 'text-blue-700 bg-blue-50' },
-  { label: 'Pago de jornal', Icon: IconUsers, tono: 'text-purple-700 bg-purple-50' },
+  { label: 'Aplicación de insumo', Icon: IconDroplet },
+  { label: 'Registrar cosecha', Icon: IconBasket },
+  { label: 'Registrar venta', Icon: IconTag },
+  { label: 'Pago de jornal', Icon: IconUsers },
 ];
 
 export default function LoteDetalle() {
-  const { loteId } = useParams();
+  const { loteId } = useParams<{ loteId: string }>();
+  const navigate = useNavigate();
+  const [lote, setLote] = useState<Lote | null | undefined>(undefined);
+  const [fincas, setFincas] = useState<Finca[]>([]);
+  const [editando, setEditando] = useState(false);
+  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
+
+  useEffect(() => {
+    if (!loteId) return;
+    const unsubLote = escucharLote(loteId, setLote);
+    const unsubFincas = escucharFincas(setFincas);
+    return () => {
+      unsubLote();
+      unsubFincas();
+    };
+  }, [loteId]);
+
+  if (lote === undefined) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-6">
+        <p style={{ color: 'var(--text-dim)' }}>Cargando...</p>
+      </div>
+    );
+  }
+
+  if (lote === null) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-6">
+        <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--text-dim)' }}>
+          <IconArrowLeft className="h-4 w-4" />
+          Mis lotes
+        </Link>
+        <p style={{ color: 'var(--text)' }}>Este lote no existe o fue borrado.</p>
+      </div>
+    );
+  }
+
+  const finca = fincas.find((f) => f.id === lote.fincaId);
+
+  async function handleBorrar() {
+    setConfirmarBorrado(false);
+    await borrarLote(lote!.id);
+    navigate('/');
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
+      <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--text-dim)' }}>
         <IconArrowLeft className="h-4 w-4" />
         Mis lotes
       </Link>
 
-      <h1 className="text-xl font-semibold text-stone-900">Lote {loteId}</h1>
-
-      {/* TODO: reemplazar por datos reales de Firestore (finca, área, árboles, ciclo activo) */}
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <Card className="p-3.5">
-          <p className="text-stone-500">Área</p>
-          <p className="font-medium text-stone-900">— ha</p>
-        </Card>
-        <Card className="p-3.5">
-          <p className="text-stone-500">Árboles/plantas</p>
-          <p className="font-medium text-stone-900">—</p>
-        </Card>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h1 className="font-serif text-2xl font-semibold" style={{ color: 'var(--text)' }}>
+            {lote.nombre}
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+            {finca ? finca.nombre : 'Lote suelto'} · {lote.cultivo}
+          </p>
+        </div>
+        <div className="flex flex-none gap-1">
+          <button
+            onClick={() => setEditando(true)}
+            aria-label="Editar lote"
+            className="flex h-9 w-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
+          >
+            <IconPencil className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setConfirmarBorrado(true)}
+            aria-label="Borrar lote"
+            className="flex h-9 w-9 items-center justify-center rounded-full"
+            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: '#b4552f' }}
+          >
+            <IconTrash className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <Card className="mt-4 border-green-200 bg-green-50/60 p-4">
-        <div className="mb-1 flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-green-700">Ciclo</p>
-          <Badge tono="ambar">Sin abrir</Badge>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl border p-3.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+          <p style={{ color: 'var(--text-dim)' }}>Área</p>
+          <p className="font-medium" style={{ color: 'var(--text)' }}>
+            {lote.areaHectareas != null ? `${lote.areaHectareas} ha` : '—'}
+          </p>
         </div>
-        <p className="font-medium text-green-900">Todavía no hay un ciclo activo en este lote</p>
-      </Card>
+        <div className="rounded-xl border p-3.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+          <p style={{ color: 'var(--text-dim)' }}>Árboles/plantas</p>
+          <p className="font-medium" style={{ color: 'var(--text)' }}>
+            {lote.cantidadArboles != null ? lote.cantidadArboles : '—'}
+          </p>
+        </div>
+      </div>
 
-      <h2 className="mt-6 mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">
+      <div
+        className="mt-4 rounded-xl border p-4"
+        style={{ borderColor: 'var(--gold)', backgroundColor: 'color-mix(in srgb, var(--gold) 12%, transparent)' }}
+      >
+        <p className="font-display mb-1 text-[11px] font-black tracking-wide uppercase" style={{ color: 'var(--gold)' }}>
+          Ciclo
+        </p>
+        <p className="font-medium" style={{ color: 'var(--text)' }}>
+          Todavía no hay un ciclo activo en este lote
+        </p>
+      </div>
+
+      <h2 className="font-display mt-6 mb-3 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
         Acciones
       </h2>
       <div className="grid grid-cols-2 gap-3">
-        {acciones.map(({ label, Icon, tono }) => (
+        {acciones.map(({ label, Icon }) => (
           <button
             key={label}
-            className="rounded-xl border border-stone-200 bg-white p-4 text-left shadow-sm transition hover:border-green-300 hover:shadow-md active:scale-[0.98]"
+            className="rounded-xl border p-4 text-left transition hover:brightness-95 active:scale-[0.98]"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
           >
-            <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-lg ${tono}`}>
+            <div
+              className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg"
+              style={{ backgroundColor: 'var(--bg)', color: 'var(--gold)' }}
+            >
               <Icon className="h-4.5 w-4.5" />
             </div>
-            <p className="text-sm font-medium text-stone-800">{label}</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+              {label}
+            </p>
           </button>
         ))}
       </div>
 
-      <h2 className="mt-6 mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">
+      <h2 className="font-display mt-6 mb-2 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
         Historial del ciclo
       </h2>
-      <p className="text-sm text-stone-400">Todavía no hay registros.</p>
+      <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+        Todavía no hay registros.
+      </p>
+
+      {editando && <FormularioLote fincas={fincas} loteExistente={lote} onCerrar={() => setEditando(false)} />}
+
+      <ConfirmDialog
+        open={confirmarBorrado}
+        title={`¿Borrar el lote "${lote.nombre}"?`}
+        description="Esta acción no se puede deshacer."
+        confirmLabel="Borrar"
+        danger
+        onConfirm={handleBorrar}
+        onCancel={() => setConfirmarBorrado(false)}
+      />
     </div>
   );
 }
