@@ -2,9 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { escucharFincas } from '../lib/fincas';
 import { escucharLote, borrarLote } from '../lib/lotes';
-import type { Finca, Lote } from '../types/models';
+import { escucharCiclosDeLote, cerrarCiclo } from '../lib/ciclos';
+import { cargarResumenCiclo, type ResumenCiclo } from '../lib/resumenCiclo';
+import type { Ciclo, Finca, Lote } from '../types/models';
 import FormularioLote from '../components/FormularioLote';
+import FormularioCiclo from '../components/FormularioCiclo';
+import FormularioAplicacion from '../components/FormularioAplicacion';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import InfoDialog from '../components/ui/InfoDialog';
 import {
   IconArrowLeft,
   IconDroplet,
@@ -16,29 +21,60 @@ import {
 } from '../components/ui/Icons';
 
 const acciones = [
-  { label: 'Aplicación de insumo', Icon: IconDroplet },
-  { label: 'Registrar cosecha', Icon: IconBasket },
-  { label: 'Registrar venta', Icon: IconTag },
-  { label: 'Pago de jornal', Icon: IconUsers },
-];
+  { id: 'aplicacion', label: 'Aplicación de insumo', Icon: IconDroplet },
+  { id: 'cosecha', label: 'Registrar cosecha', Icon: IconBasket },
+  { id: 'venta', label: 'Registrar venta', Icon: IconTag },
+  { id: 'jornal', label: 'Pago de jornal', Icon: IconUsers },
+] as const;
 
 export default function LoteDetalle() {
   const { loteId } = useParams<{ loteId: string }>();
   const navigate = useNavigate();
   const [lote, setLote] = useState<Lote | null | undefined>(undefined);
   const [fincas, setFincas] = useState<Finca[]>([]);
+  const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [editando, setEditando] = useState(false);
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
+  const [abriendoCiclo, setAbriendoCiclo] = useState(false);
+  const [confirmarCierreCiclo, setConfirmarCierreCiclo] = useState(false);
+  const [cicloSeleccionadoId, setCicloSeleccionadoId] = useState<string | null>(null);
+  const [resumen, setResumen] = useState<ResumenCiclo | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [mostrarFormAplicacion, setMostrarFormAplicacion] = useState(false);
+  const [avisoSinCiclo, setAvisoSinCiclo] = useState(false);
 
   useEffect(() => {
     if (!loteId) return;
     const unsubLote = escucharLote(loteId, setLote);
     const unsubFincas = escucharFincas(setFincas);
+    const unsubCiclos = escucharCiclosDeLote(loteId, setCiclos);
     return () => {
       unsubLote();
       unsubFincas();
+      unsubCiclos();
     };
   }, [loteId]);
+
+  // La selección sigue al ciclo activo del lote: cada vez que se abre o se
+  // cierra un ciclo, vuelve a mostrar ese (o "sin ciclo activo" si se cerró).
+  // Elegir manualmente un histórico no se pisa hasta que este valor cambie de nuevo.
+  useEffect(() => {
+    setCicloSeleccionadoId(lote?.cicloActivoId ?? null);
+  }, [lote?.cicloActivoId]);
+
+  useEffect(() => {
+    if (!cicloSeleccionadoId) {
+      setResumen(null);
+      return;
+    }
+    let cancelado = false;
+    cargarResumenCiclo(cicloSeleccionadoId).then((r) => {
+      if (!cancelado) setResumen(r);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [cicloSeleccionadoId, refreshTick]);
 
   if (lote === undefined) {
     return (
@@ -61,6 +97,24 @@ export default function LoteDetalle() {
   }
 
   const finca = fincas.find((f) => f.id === lote.fincaId);
+  const cicloActivo = ciclos.find((c) => c.id === lote.cicloActivoId && c.estado === 'abierto');
+  const ciclosCerrados = ciclos.filter((c) => c.estado === 'cerrado');
+  const cicloSeleccionado = ciclos.find((c) => c.id === cicloSeleccionadoId);
+  const viendoHistorico = !!cicloSeleccionado && cicloSeleccionado.id !== cicloActivo?.id;
+
+  async function handleCerrarCiclo() {
+    setConfirmarCierreCiclo(false);
+    await cerrarCiclo(lote!.id, cicloActivo!.id);
+  }
+
+  function handleClickAccion(id: string) {
+    if (!cicloActivo) {
+      setAvisoSinCiclo(true);
+      return;
+    }
+    if (id === 'aplicacion') setMostrarFormAplicacion(true);
+    // El resto de las acciones (cosecha, venta, jornal) llegan en las próximas historias.
+  }
 
   async function handleBorrar() {
     setConfirmarBorrado(false);
@@ -121,23 +175,181 @@ export default function LoteDetalle() {
 
       <div
         className="mt-4 rounded-xl border p-4"
-        style={{ borderColor: 'var(--gold)', backgroundColor: 'color-mix(in srgb, var(--gold) 12%, transparent)' }}
+        style={{
+          borderColor: viendoHistorico ? 'var(--border)' : 'var(--gold)',
+          backgroundColor: viendoHistorico ? 'var(--surface)' : 'color-mix(in srgb, var(--gold) 12%, transparent)',
+        }}
       >
-        <p className="font-display mb-1 text-[11px] font-black tracking-wide uppercase" style={{ color: 'var(--gold)' }}>
-          Ciclo
-        </p>
-        <p className="font-medium" style={{ color: 'var(--text)' }}>
-          Todavía no hay un ciclo activo en este lote
-        </p>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p
+            className="font-display text-[11px] font-black tracking-wide uppercase"
+            style={{ color: viendoHistorico ? 'var(--text-dim)' : 'var(--gold)' }}
+          >
+            Ciclo
+          </p>
+          {ciclos.length > 1 && (
+            <select
+              value={cicloSeleccionadoId ?? ''}
+              onChange={(e) => setCicloSeleccionadoId(e.target.value)}
+              className="rounded-lg border px-2 py-1 text-xs"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
+            >
+              {ciclos.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre} {c.estado === 'abierto' ? '(activo)' : ''}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {!cicloSeleccionado && (
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-medium" style={{ color: 'var(--text)' }}>
+              No hay un ciclo activo en este lote
+            </p>
+            <button
+              onClick={() => setAbriendoCiclo(true)}
+              className="flex-none rounded-lg px-3 py-1.5 text-xs font-medium"
+              style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
+            >
+              Abrir ciclo
+            </button>
+          </div>
+        )}
+
+        {cicloSeleccionado && !viendoHistorico && (
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="font-medium" style={{ color: 'var(--text)' }}>
+                {cicloSeleccionado.nombre}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                Abierto desde el {cicloSeleccionado.fechaInicio}
+              </p>
+            </div>
+            <button
+              onClick={() => setConfirmarCierreCiclo(true)}
+              className="flex-none rounded-lg px-3 py-1.5 text-xs font-medium"
+              style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
+            >
+              Cerrar ciclo
+            </button>
+          </div>
+        )}
+
+        {cicloSeleccionado && viendoHistorico && (
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="font-medium" style={{ color: 'var(--text)' }}>
+                {cicloSeleccionado.nombre}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                Del {cicloSeleccionado.fechaInicio} al {cicloSeleccionado.fechaCierre} · solo consulta
+              </p>
+            </div>
+            {cicloActivo && (
+              <button
+                onClick={() => setCicloSeleccionadoId(cicloActivo.id)}
+                className="flex-none rounded-lg px-3 py-1.5 text-xs font-medium"
+                style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
+              >
+                Ver ciclo activo
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {cicloSeleccionado && (
+        <>
+          <h2 className="font-display mt-6 mb-3 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+            Resumen del ciclo
+          </h2>
+          {!resumen ? (
+            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+              Cargando...
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Tamaño
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  {lote.areaHectareas != null ? `${lote.areaHectareas} ha` : '—'}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Árboles/plantas
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  {lote.cantidadArboles != null ? lote.cantidadArboles : '—'}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Aplicaciones
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  {resumen.aplicaciones}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Cosechas
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  {resumen.cosechas}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Total gastado
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  $ {resumen.totalGastado.toLocaleString('es-CO')}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Total vendido
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  $ {resumen.totalVendido.toLocaleString('es-CO')}
+                </p>
+              </div>
+              <div
+                className="col-span-2 rounded-xl border p-3 sm:col-span-2"
+                style={{
+                  borderColor: resumen.balance >= 0 ? 'var(--recent)' : '#b4552f',
+                  backgroundColor:
+                    resumen.balance >= 0
+                      ? 'color-mix(in srgb, var(--recent) 12%, transparent)'
+                      : 'color-mix(in srgb, #b4552f 12%, transparent)',
+                }}
+              >
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Balance
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  $ {resumen.balance.toLocaleString('es-CO')}
+                </p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       <h2 className="font-display mt-6 mb-3 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
         Acciones
       </h2>
       <div className="grid grid-cols-2 gap-3">
-        {acciones.map(({ label, Icon }) => (
+        {acciones.map(({ id, label, Icon }) => (
           <button
-            key={label}
+            key={id}
+            onClick={() => handleClickAccion(id)}
             className="rounded-xl border p-4 text-left transition hover:brightness-95 active:scale-[0.98]"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
           >
@@ -155,13 +367,62 @@ export default function LoteDetalle() {
       </div>
 
       <h2 className="font-display mt-6 mb-2 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
-        Historial del ciclo
+        Ciclos anteriores
       </h2>
-      <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-        Todavía no hay registros.
-      </p>
+      {ciclosCerrados.length === 0 ? (
+        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+          Todavía no hay ciclos cerrados.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {ciclosCerrados.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setCicloSeleccionadoId(c.id)}
+              className="flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition hover:brightness-95"
+              style={{
+                borderColor: c.id === cicloSeleccionadoId ? 'var(--gold)' : 'var(--border)',
+                backgroundColor: 'var(--surface)',
+              }}
+            >
+              <span className="font-medium" style={{ color: 'var(--text)' }}>
+                {c.nombre}
+              </span>
+              <span style={{ color: 'var(--text-dim)' }}>
+                {c.fechaInicio} → {c.fechaCierre}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {editando && <FormularioLote fincas={fincas} loteExistente={lote} onCerrar={() => setEditando(false)} />}
+      {abriendoCiclo && <FormularioCiclo loteId={lote.id} onCerrar={() => setAbriendoCiclo(false)} />}
+      {mostrarFormAplicacion && cicloActivo && (
+        <FormularioAplicacion
+          loteId={lote.id}
+          cicloId={cicloActivo.id}
+          onCerrar={() => setMostrarFormAplicacion(false)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
+
+      <InfoDialog
+        open={avisoSinCiclo}
+        title="Primero abrí un ciclo"
+        description="Para registrar aplicaciones, cosechas, ventas o jornales, este lote necesita un ciclo activo."
+        tono="error"
+        onClose={() => setAvisoSinCiclo(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmarCierreCiclo}
+        title={`¿Cerrar el ciclo "${cicloActivo?.nombre}"?`}
+        description="Vas a poder abrir un ciclo nuevo después. El historial de este queda guardado."
+        confirmLabel="Cerrar ciclo"
+        onConfirm={handleCerrarCiclo}
+        onCancel={() => setConfirmarCierreCiclo(false)}
+      />
 
       <ConfirmDialog
         open={confirmarBorrado}
