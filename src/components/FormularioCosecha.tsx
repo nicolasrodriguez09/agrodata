@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { crearAplicacion } from '../lib/aplicaciones';
+import { crearCosecha } from '../lib/cosechas';
 import { useAuth } from '../lib/AuthContext';
 
 interface Props {
@@ -13,37 +13,27 @@ function hoyISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const OPCIONES_RESPONSABLE = ['Freddy', 'Emerson', 'Otro'];
+const OPCIONES_CALIDAD = ['Selecta', 'No selecta'];
 
-export default function FormularioAplicacion({ loteId, cicloId, onCerrar, onGuardado }: Props) {
+export default function FormularioCosecha({ loteId, cicloId, onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
-  const [producto, setProducto] = useState('');
-  const [dosis, setDosis] = useState('');
-  const [cantidad, setCantidad] = useState('');
   const [fecha, setFecha] = useState(hoyISO());
-  const [responsableOpcion, setResponsableOpcion] = useState<string | null>(null);
-  const [otroNombre, setOtroNombre] = useState('');
+  const [cantidad, setCantidad] = useState('');
+  const [calidad, setCalidad] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!responsableOpcion || (responsableOpcion === 'Otro' && !otroNombre.trim())) {
-      setError('Elegí quién la aplicó.');
-      return;
-    }
     setGuardando(true);
     setError(null);
     try {
-      const responsable = responsableOpcion === 'Otro' ? otroNombre.trim() : responsableOpcion;
-      await crearAplicacion({
+      await crearCosecha({
         loteId,
         cicloId,
-        producto,
-        dosis,
-        cantidad,
         fecha,
-        responsable,
+        cantidad,
+        calidad: calidad ?? undefined,
         creadoPor: user!.uid,
       });
       onGuardado();
@@ -63,47 +53,15 @@ export default function FormularioAplicacion({ loteId, cicloId, onCerrar, onGuar
     <div className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-h-[90vh] overflow-y-auto rounded-t-2xl p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
+        className="w-full rounded-t-2xl p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
         style={{ backgroundColor: 'var(--surface)' }}
       >
-        <h2 className="font-serif mb-4 text-lg font-semibold" style={{ color: 'var(--text)' }}>
-          Aplicación de insumo
+        <h2 className="font-serif mb-1 text-lg font-semibold" style={{ color: 'var(--text)' }}>
+          Registrar cosecha
         </h2>
-
-        <label className={label} style={{ color: 'var(--text)' }}>
-          Producto <span className="text-red-500">*</span>
-        </label>
-        <input
-          required
-          placeholder="Ej. Fungicida XYZ"
-          value={producto}
-          onChange={(e) => setProducto(e.target.value)}
-          className={campo}
-          style={campoEstilo}
-        />
-
-        <label className={label} style={{ color: 'var(--text)' }}>
-          Dosis (opcional)
-        </label>
-        <input
-          placeholder="Ej. 2 ml por litro"
-          value={dosis}
-          onChange={(e) => setDosis(e.target.value)}
-          className={campo}
-          style={campoEstilo}
-        />
-
-        <label className={label} style={{ color: 'var(--text)' }}>
-          Cantidad aplicada <span className="text-red-500">*</span>
-        </label>
-        <input
-          required
-          placeholder="Ej. 20 litros"
-          value={cantidad}
-          onChange={(e) => setCantidad(e.target.value)}
-          className={campo}
-          style={campoEstilo}
-        />
+        <p className="mb-4 text-sm" style={{ color: 'var(--text-dim)' }}>
+          Si hoy recogieron más de una calidad, cargá un registro por cada una.
+        </p>
 
         <label className={label} style={{ color: 'var(--text)' }}>
           Fecha <span className="text-red-500">*</span>
@@ -118,17 +76,29 @@ export default function FormularioAplicacion({ loteId, cicloId, onCerrar, onGuar
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Quién la aplicó <span className="text-red-500">*</span>
+          Cantidad <span className="text-red-500">*</span>
         </label>
-        <div className="mb-2 flex gap-2">
-          {OPCIONES_RESPONSABLE.map((op) => (
+        <input
+          required
+          placeholder="Ej. 20 cajas"
+          value={cantidad}
+          onChange={(e) => setCantidad(e.target.value)}
+          className={campo}
+          style={campoEstilo}
+        />
+
+        <label className={label} style={{ color: 'var(--text)' }}>
+          Calidad (opcional)
+        </label>
+        <div className="mb-4 flex gap-2">
+          {OPCIONES_CALIDAD.map((op) => (
             <button
               key={op}
               type="button"
-              onClick={() => setResponsableOpcion(op)}
+              onClick={() => setCalidad(calidad === op ? null : op)}
               className="flex-1 rounded-xl border py-2.5 text-sm font-medium"
               style={
-                responsableOpcion === op
+                calidad === op
                   ? { backgroundColor: 'var(--gold)', borderColor: 'var(--gold)', color: 'var(--gold-ink)' }
                   : { borderColor: 'var(--border)', color: 'var(--text)' }
               }
@@ -137,18 +107,6 @@ export default function FormularioAplicacion({ loteId, cicloId, onCerrar, onGuar
             </button>
           ))}
         </div>
-        {responsableOpcion === 'Otro' && (
-          <input
-            required
-            autoFocus
-            placeholder="Nombre"
-            value={otroNombre}
-            onChange={(e) => setOtroNombre(e.target.value)}
-            className={campo}
-            style={campoEstilo}
-          />
-        )}
-        {responsableOpcion !== 'Otro' && <div className="mb-4" />}
 
         {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
 

@@ -1,7 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { useTheme } from '../lib/ThemeContext';
-import TerrenoFondo from './TerrenoFondo';
 import { IconLeaf, IconWallet, IconChart, IconSun, IconMoon } from './ui/Icons';
 
 const navItems = [
@@ -16,8 +15,6 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <TerrenoFondo />
-
       <header
         className="sticky top-0 z-10 flex items-center justify-between px-4 py-3.5"
         style={{ backgroundColor: 'var(--header-bg)', color: 'var(--header-text)' }}

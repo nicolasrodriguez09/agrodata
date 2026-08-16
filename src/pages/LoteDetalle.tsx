@@ -4,10 +4,14 @@ import { escucharFincas } from '../lib/fincas';
 import { escucharLote, borrarLote } from '../lib/lotes';
 import { escucharCiclosDeLote, cerrarCiclo } from '../lib/ciclos';
 import { cargarResumenCiclo, type ResumenCiclo } from '../lib/resumenCiclo';
-import type { Ciclo, Finca, Lote } from '../types/models';
+import { escucharAplicacionesDeCiclo } from '../lib/aplicaciones';
+import { escucharCosechasDeCiclo } from '../lib/cosechas';
+import type { Aplicacion, Ciclo, Cosecha, Finca, Lote } from '../types/models';
 import FormularioLote from '../components/FormularioLote';
 import FormularioCiclo from '../components/FormularioCiclo';
 import FormularioAplicacion from '../components/FormularioAplicacion';
+import FormularioCosecha from '../components/FormularioCosecha';
+import CalendarioActividad from '../components/CalendarioActividad';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoDialog from '../components/ui/InfoDialog';
 import {
@@ -18,6 +22,7 @@ import {
   IconUsers,
   IconPencil,
   IconTrash,
+  IconSearch,
 } from '../components/ui/Icons';
 
 const acciones = [
@@ -41,7 +46,13 @@ export default function LoteDetalle() {
   const [resumen, setResumen] = useState<ResumenCiclo | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [mostrarFormAplicacion, setMostrarFormAplicacion] = useState(false);
+  const [mostrarFormCosecha, setMostrarFormCosecha] = useState(false);
   const [avisoSinCiclo, setAvisoSinCiclo] = useState(false);
+  const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([]);
+  const [cosechas, setCosechas] = useState<Cosecha[]>([]);
+  const [filtroTexto, setFiltroTexto] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState<'todo' | 'aplicacion' | 'cosecha'>('todo');
+  const [vistaHistorial, setVistaHistorial] = useState<'lista' | 'calendario'>('lista');
 
   useEffect(() => {
     if (!loteId) return;
@@ -75,6 +86,22 @@ export default function LoteDetalle() {
       cancelado = true;
     };
   }, [cicloSeleccionadoId, refreshTick]);
+
+  useEffect(() => {
+    if (!cicloSeleccionadoId) {
+      setAplicaciones([]);
+      return;
+    }
+    return escucharAplicacionesDeCiclo(cicloSeleccionadoId, setAplicaciones);
+  }, [cicloSeleccionadoId]);
+
+  useEffect(() => {
+    if (!cicloSeleccionadoId) {
+      setCosechas([]);
+      return;
+    }
+    return escucharCosechasDeCiclo(cicloSeleccionadoId, setCosechas);
+  }, [cicloSeleccionadoId]);
 
   if (lote === undefined) {
     return (
@@ -113,7 +140,8 @@ export default function LoteDetalle() {
       return;
     }
     if (id === 'aplicacion') setMostrarFormAplicacion(true);
-    // El resto de las acciones (cosecha, venta, jornal) llegan en las próximas historias.
+    if (id === 'cosecha') setMostrarFormCosecha(true);
+    // Venta y jornal llegan en las próximas historias.
   }
 
   async function handleBorrar() {
@@ -366,6 +394,143 @@ export default function LoteDetalle() {
         ))}
       </div>
 
+      {cicloSeleccionado && (() => {
+        const items: Array<
+          | { tipo: 'aplicacion'; id: string; fecha: string; data: Aplicacion }
+          | { tipo: 'cosecha'; id: string; fecha: string; data: Cosecha }
+        > = [
+          ...aplicaciones.map((a) => ({ tipo: 'aplicacion' as const, id: a.id, fecha: a.fecha, data: a })),
+          ...cosechas.map((c) => ({ tipo: 'cosecha' as const, id: c.id, fecha: c.fecha, data: c })),
+        ].sort((x, y) => y.fecha.localeCompare(x.fecha));
+
+        const hayAlgo = items.length > 0;
+        const itemsPorTipo = filtroTipo === 'todo' ? items : items.filter((i) => i.tipo === filtroTipo);
+        const texto = filtroTexto.trim().toLowerCase();
+        const itemsFiltrados = itemsPorTipo.filter((i) => {
+          if (!texto) return true;
+          if (i.tipo === 'aplicacion') return i.data.producto.toLowerCase().includes(texto);
+          return (i.data.calidad ?? '').toLowerCase().includes(texto);
+        });
+
+        return (
+          <>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+                Historial del ciclo
+              </h2>
+              {hayAlgo && (
+                <div
+                  className="font-display flex rounded-full p-0.5 text-[10.5px] font-black tracking-wide"
+                  style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+                >
+                  {(['lista', 'calendario'] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setVistaHistorial(v)}
+                      className="rounded-full px-2.5 py-1 uppercase transition"
+                      style={
+                        vistaHistorial === v
+                          ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
+                          : { color: 'var(--text-dim)' }
+                      }
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {!hayAlgo ? (
+              <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                Todavía no hay aplicaciones ni cosechas registradas en este ciclo.
+              </p>
+            ) : vistaHistorial === 'calendario' ? (
+              <CalendarioActividad aplicaciones={aplicaciones} cosechas={cosechas} />
+            ) : (
+              <>
+                <div className="mb-3 flex gap-2">
+                  {(['todo', 'aplicacion', 'cosecha'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setFiltroTipo(t)}
+                      className="rounded-full px-3 py-1.5 text-xs font-medium"
+                      style={
+                        filtroTipo === t
+                          ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
+                          : { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }
+                      }
+                    >
+                      {t === 'todo' ? 'Todo' : t === 'aplicacion' ? 'Aplicaciones' : 'Cosechas'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative mb-3">
+                  <IconSearch
+                    className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                    style={{ color: 'var(--text-dim)' }}
+                  />
+                  <input
+                    value={filtroTexto}
+                    onChange={(e) => setFiltroTexto(e.target.value)}
+                    placeholder="Buscar por producto o calidad..."
+                    className="w-full rounded-xl border py-2.5 pr-3 pl-9 text-sm focus:outline-none"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text)' }}
+                  />
+                </div>
+
+                {itemsFiltrados.length === 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                    Nada coincide con "{filtroTexto}".
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {itemsFiltrados.map((item) => (
+                      <div
+                        key={`${item.tipo}-${item.id}`}
+                        className="flex gap-3 rounded-xl border p-3.5"
+                        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+                      >
+                        <div
+                          className="flex h-9 w-9 flex-none items-center justify-center rounded-lg"
+                          style={
+                            item.tipo === 'aplicacion'
+                              ? { backgroundColor: 'var(--recent)', color: 'var(--recent-text)' }
+                              : { backgroundColor: 'var(--cosecha)', color: 'var(--cosecha-text)' }
+                          }
+                        >
+                          {item.tipo === 'aplicacion' ? (
+                            <IconDroplet className="h-4.5 w-4.5" />
+                          ) : (
+                            <IconBasket className="h-4.5 w-4.5" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-serif font-semibold" style={{ color: 'var(--text)' }}>
+                              {item.tipo === 'aplicacion' ? item.data.producto : `Cosecha: ${item.data.cantidad}`}
+                            </p>
+                            <p className="flex-none text-xs" style={{ color: 'var(--text-dim)' }}>
+                              {item.fecha}
+                            </p>
+                          </div>
+                          <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                            {item.tipo === 'aplicacion'
+                              ? `${item.data.cantidad}${item.data.dosis ? ` · ${item.data.dosis}` : ''} · aplicó ${item.data.responsable}`
+                              : (item.data.calidad ?? 'Sin clasificar')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        );
+      })()}
+
       <h2 className="font-display mt-6 mb-2 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
         Ciclos anteriores
       </h2>
@@ -403,6 +568,14 @@ export default function LoteDetalle() {
           loteId={lote.id}
           cicloId={cicloActivo.id}
           onCerrar={() => setMostrarFormAplicacion(false)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
+      {mostrarFormCosecha && cicloActivo && (
+        <FormularioCosecha
+          loteId={lote.id}
+          cicloId={cicloActivo.id}
+          onCerrar={() => setMostrarFormCosecha(false)}
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />
       )}

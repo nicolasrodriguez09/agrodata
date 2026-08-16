@@ -44,6 +44,8 @@
   --nodata-text: #9a9a8c;
   --nodata-border: #cfcfc0;
   --sueltos: #78716c;
+  --cosecha: #2f6690;
+  --cosecha-text: #f2f6fa;
 }
 
 .dark {
@@ -66,6 +68,8 @@
   --nodata-text: #6c7565;
   --nodata-border: #2a3124;
   --sueltos: #a8a29e;
+  --cosecha: #5b93c4;
+  --cosecha-text: #0b1721;
 }
 
 html,
