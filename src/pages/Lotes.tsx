@@ -2,28 +2,19 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { escucharFincas } from '../lib/fincas';
 import { escucharLotes } from '../lib/lotes';
+import { escucharUltimaAplicacionPorLote } from '../lib/aplicaciones';
 import type { Finca, Lote } from '../types/models';
 import EmptyState from '../components/ui/EmptyState';
 import FormularioLote from '../components/FormularioLote';
 import { IconChevronDown, IconChevronRight, IconMap, IconPlus } from '../components/ui/Icons';
 
-// TODO (Épica 3): reemplazar por el cálculo real (días desde la última
-// aplicación registrada de cada lote) cuando exista ese módulo. Mientras
-// tanto, de muestra — igual que el resto de lotesMock — para poder revisar
-// cómo se ve el sistema de colores completo.
-const diasUltimaAplicacionMock: Record<string, number | null> = {
-  'lv-1': 4,
-  'lv-2': 12,
-  'lv-3': 26,
-  'ed-1': 2,
-  'ed-2': 9,
-  'ed-3': null,
-  'f3-1': 18,
-  'f3-2': 31,
-  'f3-3': 6,
-  'suelto-1': null,
-  'suelto-2': 40,
-};
+function diasDesde(fechaISO: string): number {
+  const [y, m, d] = fechaISO.split('-').map(Number);
+  const fecha = new Date(y, m - 1, d);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return Math.round((hoy.getTime() - fecha.getTime()) / 86400000);
+}
 
 function estadoDe(dias: number | null) {
   if (dias === null) return { estilo: 'nodata', texto: 'Sin registrar' } as const;
@@ -49,8 +40,8 @@ function descripcionLote(lote: Lote) {
   return lote.areaHectareas != null ? `${lote.cultivo} · ${lote.areaHectareas} ha` : lote.cultivo;
 }
 
-function TileLote({ lote }: { lote: Lote }) {
-  const estado = estadoDe(diasUltimaAplicacionMock[lote.id] ?? null);
+function TileLote({ lote, dias }: { lote: Lote; dias: number | null }) {
+  const estado = estadoDe(dias);
   const estilo = ESTILOS_CHIP[estado.estilo];
   const esNodata = estado.estilo === 'nodata';
 
@@ -77,8 +68,8 @@ function TileLote({ lote }: { lote: Lote }) {
   );
 }
 
-function FilaLote({ lote }: { lote: Lote }) {
-  const estado = estadoDe(diasUltimaAplicacionMock[lote.id] ?? null);
+function FilaLote({ lote, dias }: { lote: Lote; dias: number | null }) {
+  const estado = estadoDe(dias);
   const estilo = ESTILOS_CHIP[estado.estilo];
   const esNodata = estado.estilo === 'nodata';
 
@@ -113,11 +104,13 @@ function SeccionFinca({
   dotColor,
   lotes,
   vista,
+  ultimaAplicacionPorLote,
 }: {
   nombre: string;
   dotColor: string;
   lotes: Lote[];
   vista: 'lista' | 'croquis';
+  ultimaAplicacionPorLote: Map<string, string>;
 }) {
   const [expandido, setExpandido] = useState(false);
   const visibles = expandido ? lotes : lotes.slice(0, MOSTRAR_INICIAL);
@@ -146,15 +139,17 @@ function SeccionFinca({
 
       {vista === 'lista' ? (
         <div className="flex flex-col gap-2">
-          {visibles.map((lote) => (
-            <FilaLote key={lote.id} lote={lote} />
-          ))}
+          {visibles.map((lote) => {
+            const fecha = ultimaAplicacionPorLote.get(lote.id);
+            return <FilaLote key={lote.id} lote={lote} dias={fecha ? diasDesde(fecha) : null} />;
+          })}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          {visibles.map((lote) => (
-            <TileLote key={lote.id} lote={lote} />
-          ))}
+          {visibles.map((lote) => {
+            const fecha = ultimaAplicacionPorLote.get(lote.id);
+            return <TileLote key={lote.id} lote={lote} dias={fecha ? diasDesde(fecha) : null} />;
+          })}
         </div>
       )}
 
@@ -178,6 +173,7 @@ export default function Lotes() {
   const [cargando, setCargando] = useState(true);
   const [vista, setVista] = useState<'lista' | 'croquis'>('lista');
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [ultimaAplicacionPorLote, setUltimaAplicacionPorLote] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     const unsubFincas = escucharFincas(setFincas);
@@ -185,9 +181,11 @@ export default function Lotes() {
       setLotes(data);
       setCargando(false);
     });
+    const unsubAplicaciones = escucharUltimaAplicacionPorLote(setUltimaAplicacionPorLote);
     return () => {
       unsubFincas();
       unsubLotes();
+      unsubAplicaciones();
     };
   }, []);
 
@@ -275,11 +273,18 @@ export default function Lotes() {
             dotColor="var(--gold)"
             lotes={lotes.filter((l) => l.fincaId === finca.id)}
             vista={vista}
+            ultimaAplicacionPorLote={ultimaAplicacionPorLote}
           />
         ))}
 
         {lotesSueltos.length > 0 && (
-          <SeccionFinca nombre="Lotes sueltos" dotColor="var(--sueltos)" lotes={lotesSueltos} vista={vista} />
+          <SeccionFinca
+            nombre="Lotes sueltos"
+            dotColor="var(--sueltos)"
+            lotes={lotesSueltos}
+            vista={vista}
+            ultimaAplicacionPorLote={ultimaAplicacionPorLote}
+          />
         )}
       </div>
 

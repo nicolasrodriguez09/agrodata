@@ -76,15 +76,19 @@ export interface CompraInsumo {
   creadoPor: string;
 }
 
+// A propósito sin loteId/cicloId: con pocos trabajadores y pagos esporádicos,
+// no vale la pena obligar a atar cada jornal a un lote puntual. Vive como
+// gasto general del negocio en Finanzas, no dentro del resumen de cada ciclo.
 export interface Jornal {
   id: string;
-  loteId: string;
-  cicloId: string;
   trabajador: string;
   quienPago: string;
   labor?: string;
   fecha: string;
-  valor: number;
+  unidad: 'dia' | 'hora';
+  cantidad: number;
+  tarifa: number;
+  valor: number; // cantidad * tarifa, guardado para no tener que recalcular
   pagado: boolean;
   creadoPor: string;
 }

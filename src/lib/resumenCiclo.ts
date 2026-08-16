@@ -15,23 +15,20 @@ async function contar(coleccion: string, cicloId: string) {
 }
 
 /**
- * Trae los totales reales de un ciclo. Hoy, con los módulos de Aplicaciones,
- * Cosecha/Venta, Compras y Jornales todavía sin construir, estas colecciones
- * están vacías y todo da 0 — apenas existan esos registros, esto se llena solo.
+ * Trae los totales reales de un ciclo. "Total gastado" es solo compras de
+ * insumos — los jornales no están atados a un lote/ciclo (ver Jornal en
+ * types/models.ts), así que viven aparte en Finanzas, no acá.
  */
 export async function cargarResumenCiclo(cicloId: string): Promise<ResumenCiclo> {
-  const [aplicaciones, cosechas, compras, jornales, ventas] = await Promise.all([
+  const [aplicaciones, cosechas, compras, ventas] = await Promise.all([
     contar('aplicaciones', cicloId),
     contar('cosechas', cicloId),
     contar('compras', cicloId),
-    contar('jornales', cicloId),
     contar('ventas', cicloId),
   ]);
 
-  const totalCompras = compras.reduce((s, d) => s + (Number(d.data().costo) || 0), 0);
-  const totalJornales = jornales.reduce((s, d) => s + (Number(d.data().valor) || 0), 0);
+  const totalGastado = compras.reduce((s, d) => s + (Number(d.data().costo) || 0), 0);
   const totalVendido = ventas.reduce((s, d) => s + (Number(d.data().precio) || 0), 0);
-  const totalGastado = totalCompras + totalJornales;
 
   return {
     aplicaciones: aplicaciones.length,

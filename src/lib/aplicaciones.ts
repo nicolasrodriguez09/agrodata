@@ -12,6 +12,19 @@ export function escucharAplicacionesDeCiclo(cicloId: string, callback: (aplicaci
   });
 }
 
+/** Fecha (YYYY-MM-DD) de la aplicación más reciente de cada lote, para el color en "Mis fincas". */
+export function escucharUltimaAplicacionPorLote(callback: (porLote: Map<string, string>) => void) {
+  return onSnapshot(collection(db, 'aplicaciones'), (snap) => {
+    const porLote = new Map<string, string>();
+    snap.docs.forEach((d) => {
+      const { loteId, fecha } = d.data() as Aplicacion;
+      const actual = porLote.get(loteId);
+      if (!actual || fecha > actual) porLote.set(loteId, fecha);
+    });
+    callback(porLote);
+  });
+}
+
 export interface DatosAplicacion {
   loteId: string;
   cicloId: string;

@@ -6,11 +6,13 @@ import { escucharCiclosDeLote, cerrarCiclo } from '../lib/ciclos';
 import { cargarResumenCiclo, type ResumenCiclo } from '../lib/resumenCiclo';
 import { escucharAplicacionesDeCiclo } from '../lib/aplicaciones';
 import { escucharCosechasDeCiclo } from '../lib/cosechas';
-import type { Aplicacion, Ciclo, Cosecha, Finca, Lote } from '../types/models';
+import { escucharVentasDeCiclo } from '../lib/ventas';
+import type { Aplicacion, Ciclo, Cosecha, Finca, Lote, Venta } from '../types/models';
 import FormularioLote from '../components/FormularioLote';
 import FormularioCiclo from '../components/FormularioCiclo';
 import FormularioAplicacion from '../components/FormularioAplicacion';
 import FormularioCosecha from '../components/FormularioCosecha';
+import FormularioVenta from '../components/FormularioVenta';
 import CalendarioActividad from '../components/CalendarioActividad';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoDialog from '../components/ui/InfoDialog';
@@ -19,7 +21,6 @@ import {
   IconDroplet,
   IconBasket,
   IconTag,
-  IconUsers,
   IconPencil,
   IconTrash,
   IconSearch,
@@ -29,7 +30,6 @@ const acciones = [
   { id: 'aplicacion', label: 'Aplicación de insumo', Icon: IconDroplet },
   { id: 'cosecha', label: 'Registrar cosecha', Icon: IconBasket },
   { id: 'venta', label: 'Registrar venta', Icon: IconTag },
-  { id: 'jornal', label: 'Pago de jornal', Icon: IconUsers },
 ] as const;
 
 export default function LoteDetalle() {
@@ -47,9 +47,11 @@ export default function LoteDetalle() {
   const [refreshTick, setRefreshTick] = useState(0);
   const [mostrarFormAplicacion, setMostrarFormAplicacion] = useState(false);
   const [mostrarFormCosecha, setMostrarFormCosecha] = useState(false);
+  const [mostrarFormVenta, setMostrarFormVenta] = useState(false);
   const [avisoSinCiclo, setAvisoSinCiclo] = useState(false);
   const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([]);
   const [cosechas, setCosechas] = useState<Cosecha[]>([]);
+  const [ventas, setVentas] = useState<Venta[]>([]);
   const [filtroTexto, setFiltroTexto] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<'todo' | 'aplicacion' | 'cosecha'>('todo');
   const [vistaHistorial, setVistaHistorial] = useState<'lista' | 'calendario'>('lista');
@@ -103,6 +105,14 @@ export default function LoteDetalle() {
     return escucharCosechasDeCiclo(cicloSeleccionadoId, setCosechas);
   }, [cicloSeleccionadoId]);
 
+  useEffect(() => {
+    if (!cicloSeleccionadoId) {
+      setVentas([]);
+      return;
+    }
+    return escucharVentasDeCiclo(cicloSeleccionadoId, setVentas);
+  }, [cicloSeleccionadoId]);
+
   if (lote === undefined) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-6">
@@ -141,7 +151,7 @@ export default function LoteDetalle() {
     }
     if (id === 'aplicacion') setMostrarFormAplicacion(true);
     if (id === 'cosecha') setMostrarFormCosecha(true);
-    // Venta y jornal llegan en las próximas historias.
+    if (id === 'venta') setMostrarFormVenta(true);
   }
 
   async function handleBorrar() {
@@ -334,7 +344,7 @@ export default function LoteDetalle() {
               </div>
               <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                  Total gastado
+                  Gastado en insumos
                 </p>
                 <p className="font-medium" style={{ color: 'var(--text)' }}>
                   $ {resumen.totalGastado.toLocaleString('es-CO')}
@@ -531,6 +541,49 @@ export default function LoteDetalle() {
         );
       })()}
 
+      {cicloSeleccionado && (
+        <>
+          <h2 className="font-display mt-6 mb-3 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+            Ventas registradas
+          </h2>
+          {ventas.length === 0 ? (
+            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+              Todavía no hay ventas registradas en este ciclo.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {ventas.map((v) => (
+                <div
+                  key={v.id}
+                  className="rounded-xl border p-3.5"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-serif font-semibold" style={{ color: 'var(--text)' }}>
+                      $ {v.precio.toLocaleString('es-CO')}
+                    </p>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-medium"
+                      style={
+                        v.cobrado
+                          ? { backgroundColor: 'var(--recent)', color: 'var(--recent-text)' }
+                          : { backgroundColor: 'var(--nodata)', color: 'var(--nodata-text)', border: '1px dashed var(--nodata-border)' }
+                      }
+                    >
+                      {v.cobrado ? 'Cobrado' : 'Pendiente de cobro'}
+                    </span>
+                  </div>
+                  <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                    {v.cantidad}
+                    {v.comprador ? ` · ${v.comprador}` : ''} · {v.fecha}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
       <h2 className="font-display mt-6 mb-2 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
         Ciclos anteriores
       </h2>
@@ -579,11 +632,19 @@ export default function LoteDetalle() {
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />
       )}
+      {mostrarFormVenta && cicloActivo && (
+        <FormularioVenta
+          loteId={lote.id}
+          cicloId={cicloActivo.id}
+          onCerrar={() => setMostrarFormVenta(false)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
 
       <InfoDialog
         open={avisoSinCiclo}
         title="Primero abrí un ciclo"
-        description="Para registrar aplicaciones, cosechas, ventas o jornales, este lote necesita un ciclo activo."
+        description="Para registrar aplicaciones, cosechas o ventas, este lote necesita un ciclo activo."
         tono="error"
         onClose={() => setAvisoSinCiclo(false)}
       />
