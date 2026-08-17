@@ -48,6 +48,8 @@ export default function LoteDetalle() {
   const [mostrarFormAplicacion, setMostrarFormAplicacion] = useState(false);
   const [mostrarFormCosecha, setMostrarFormCosecha] = useState(false);
   const [mostrarFormVenta, setMostrarFormVenta] = useState(false);
+  const [editandoAplicacion, setEditandoAplicacion] = useState<Aplicacion | null>(null);
+  const [editandoCosecha, setEditandoCosecha] = useState<Cosecha | null>(null);
   const [avisoSinCiclo, setAvisoSinCiclo] = useState(false);
   const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([]);
   const [cosechas, setCosechas] = useState<Cosecha[]>([]);
@@ -342,37 +344,12 @@ export default function LoteDetalle() {
                   {resumen.cosechas}
                 </p>
               </div>
-              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                  Gastado en insumos
-                </p>
-                <p className="font-medium" style={{ color: 'var(--text)' }}>
-                  $ {resumen.totalGastado.toLocaleString('es-CO')}
-                </p>
-              </div>
-              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+              <div className="col-span-2 rounded-xl border p-3 sm:col-span-2" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
                   Total vendido
                 </p>
                 <p className="font-medium" style={{ color: 'var(--text)' }}>
                   $ {resumen.totalVendido.toLocaleString('es-CO')}
-                </p>
-              </div>
-              <div
-                className="col-span-2 rounded-xl border p-3 sm:col-span-2"
-                style={{
-                  borderColor: resumen.balance >= 0 ? 'var(--recent)' : '#b4552f',
-                  backgroundColor:
-                    resumen.balance >= 0
-                      ? 'color-mix(in srgb, var(--recent) 12%, transparent)'
-                      : 'color-mix(in srgb, #b4552f 12%, transparent)',
-                }}
-              >
-                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                  Balance
-                </p>
-                <p className="font-medium" style={{ color: 'var(--text)' }}>
-                  $ {resumen.balance.toLocaleString('es-CO')}
                 </p>
               </div>
             </div>
@@ -497,9 +474,13 @@ export default function LoteDetalle() {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {itemsFiltrados.map((item) => (
-                      <div
+                      <button
                         key={`${item.tipo}-${item.id}`}
-                        className="flex gap-3 rounded-xl border p-3.5"
+                        type="button"
+                        onClick={() =>
+                          item.tipo === 'aplicacion' ? setEditandoAplicacion(item.data) : setEditandoCosecha(item.data)
+                        }
+                        className="flex gap-3 rounded-xl border p-3.5 text-left transition hover:brightness-95 active:scale-[0.99]"
                         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                       >
                         <div
@@ -531,7 +512,11 @@ export default function LoteDetalle() {
                               : (item.data.calidad ?? 'Sin clasificar')}
                           </p>
                         </div>
-                      </div>
+                        <IconPencil
+                          className="h-4 w-4 flex-none self-center"
+                          style={{ color: 'var(--text-dim)' }}
+                        />
+                      </button>
                     ))}
                   </div>
                 )}
@@ -637,6 +622,24 @@ export default function LoteDetalle() {
           loteId={lote.id}
           cicloId={cicloActivo.id}
           onCerrar={() => setMostrarFormVenta(false)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
+      {editandoAplicacion && (
+        <FormularioAplicacion
+          loteId={editandoAplicacion.loteId}
+          cicloId={editandoAplicacion.cicloId}
+          aplicacionExistente={editandoAplicacion}
+          onCerrar={() => setEditandoAplicacion(null)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
+      {editandoCosecha && (
+        <FormularioCosecha
+          loteId={editandoCosecha.loteId}
+          cicloId={editandoCosecha.cicloId}
+          cosechaExistente={editandoCosecha}
+          onCerrar={() => setEditandoCosecha(null)}
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />
       )}

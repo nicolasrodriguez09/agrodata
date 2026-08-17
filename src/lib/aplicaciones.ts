@@ -1,4 +1,4 @@
-import { collection, addDoc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Aplicacion } from '../types/models';
 
@@ -46,5 +46,18 @@ export async function crearAplicacion(data: DatosAplicacion) {
     fecha: data.fecha,
     responsable: data.responsable.trim(),
     creadoPor: data.creadoPor,
+  });
+}
+
+export async function actualizarAplicacion(
+  id: string,
+  data: Pick<DatosAplicacion, 'producto' | 'dosis' | 'cantidad' | 'fecha' | 'responsable'>,
+) {
+  await updateDoc(doc(db, 'aplicaciones', id), {
+    producto: data.producto.trim(),
+    dosis: data.dosis?.trim() || null,
+    cantidad: data.cantidad.trim(),
+    fecha: data.fecha,
+    responsable: data.responsable.trim(),
   });
 }

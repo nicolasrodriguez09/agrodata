@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { crearAplicacion } from '../lib/aplicaciones';
+import { crearAplicacion, actualizarAplicacion } from '../lib/aplicaciones';
 import { useAuth } from '../lib/AuthContext';
+import type { Aplicacion } from '../types/models';
 
 interface Props {
   loteId: string;
   cicloId: string;
+  aplicacionExistente?: Aplicacion | null;
   onCerrar: () => void;
   onGuardado: () => void;
 }
@@ -15,14 +17,19 @@ function hoyISO() {
 
 const OPCIONES_RESPONSABLE = ['Freddy', 'Emerson', 'Otro'];
 
-export default function FormularioAplicacion({ loteId, cicloId, onCerrar, onGuardado }: Props) {
+export default function FormularioAplicacion({ loteId, cicloId, aplicacionExistente, onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
-  const [producto, setProducto] = useState('');
-  const [dosis, setDosis] = useState('');
-  const [cantidad, setCantidad] = useState('');
-  const [fecha, setFecha] = useState(hoyISO());
-  const [responsableOpcion, setResponsableOpcion] = useState<string | null>(null);
-  const [otroNombre, setOtroNombre] = useState('');
+  const editando = !!aplicacionExistente;
+  const [producto, setProducto] = useState(aplicacionExistente?.producto ?? '');
+  const [dosis, setDosis] = useState(aplicacionExistente?.dosis ?? '');
+  const [cantidad, setCantidad] = useState(aplicacionExistente?.cantidad ?? '');
+  const [fecha, setFecha] = useState(aplicacionExistente?.fecha ?? hoyISO());
+  const responsableInicial = aplicacionExistente?.responsable ?? null;
+  const esOpcionConocida = responsableInicial && OPCIONES_RESPONSABLE.slice(0, 2).includes(responsableInicial);
+  const [responsableOpcion, setResponsableOpcion] = useState<string | null>(
+    responsableInicial ? (esOpcionConocida ? responsableInicial : 'Otro') : null,
+  );
+  const [otroNombre, setOtroNombre] = useState(responsableInicial && !esOpcionConocida ? responsableInicial : '');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,16 +43,11 @@ export default function FormularioAplicacion({ loteId, cicloId, onCerrar, onGuar
     setError(null);
     try {
       const responsable = responsableOpcion === 'Otro' ? otroNombre.trim() : responsableOpcion;
-      await crearAplicacion({
-        loteId,
-        cicloId,
-        producto,
-        dosis,
-        cantidad,
-        fecha,
-        responsable,
-        creadoPor: user!.uid,
-      });
+      if (editando) {
+        await actualizarAplicacion(aplicacionExistente!.id, { producto, dosis, cantidad, fecha, responsable });
+      } else {
+        await crearAplicacion({ loteId, cicloId, producto, dosis, cantidad, fecha, responsable, creadoPor: user!.uid });
+      }
       onGuardado();
       onCerrar();
     } catch {
@@ -67,7 +69,7 @@ export default function FormularioAplicacion({ loteId, cicloId, onCerrar, onGuar
         style={{ backgroundColor: 'var(--surface)' }}
       >
         <h2 className="font-serif mb-4 text-lg font-semibold" style={{ color: 'var(--text)' }}>
-          Aplicación de insumo
+          {editando ? 'Editar aplicación' : 'Aplicación de insumo'}
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>

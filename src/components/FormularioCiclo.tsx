@@ -45,7 +45,7 @@ export default function FormularioCiclo({ loteId, onCerrar }: Props) {
           Abrir nuevo ciclo
         </h2>
         <p className="mb-4 text-sm" style={{ color: 'var(--text-dim)' }}>
-          Todo lo que registres en este lote (aplicaciones, jornales, compras, cosechas y ventas)
+          Todo lo que registres en este lote (aplicaciones, cosechas y ventas)
           va a quedar agrupado bajo este ciclo hasta que lo cierres.
         </p>
 

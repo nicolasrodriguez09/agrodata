@@ -90,6 +90,18 @@ export function IconPlus(props: IconProps) {
   );
 }
 
+export function IconCamera(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path
+        d="M4 8h2.5l1.2-2h8.6l1.2 2H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="13.5" r="3.5" />
+    </svg>
+  );
+}
+
 export function IconPencil(props: IconProps) {
   return (
     <svg {...base} {...props}>

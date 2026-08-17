@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { crearCosecha } from '../lib/cosechas';
+import { crearCosecha, actualizarCosecha } from '../lib/cosechas';
 import { useAuth } from '../lib/AuthContext';
+import type { Cosecha } from '../types/models';
 
 interface Props {
   loteId: string;
   cicloId: string;
+  cosechaExistente?: Cosecha | null;
   onCerrar: () => void;
   onGuardado: () => void;
 }
@@ -15,11 +17,12 @@ function hoyISO() {
 
 const OPCIONES_CALIDAD = ['Selecta', 'No selecta'];
 
-export default function FormularioCosecha({ loteId, cicloId, onCerrar, onGuardado }: Props) {
+export default function FormularioCosecha({ loteId, cicloId, cosechaExistente, onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
-  const [fecha, setFecha] = useState(hoyISO());
-  const [cantidad, setCantidad] = useState('');
-  const [calidad, setCalidad] = useState<string | null>(null);
+  const editando = !!cosechaExistente;
+  const [fecha, setFecha] = useState(cosechaExistente?.fecha ?? hoyISO());
+  const [cantidad, setCantidad] = useState(cosechaExistente?.cantidad ?? '');
+  const [calidad, setCalidad] = useState<string | null>(cosechaExistente?.calidad ?? null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,14 +31,11 @@ export default function FormularioCosecha({ loteId, cicloId, onCerrar, onGuardad
     setGuardando(true);
     setError(null);
     try {
-      await crearCosecha({
-        loteId,
-        cicloId,
-        fecha,
-        cantidad,
-        calidad: calidad ?? undefined,
-        creadoPor: user!.uid,
-      });
+      if (editando) {
+        await actualizarCosecha(cosechaExistente!.id, { fecha, cantidad, calidad: calidad ?? undefined });
+      } else {
+        await crearCosecha({ loteId, cicloId, fecha, cantidad, calidad: calidad ?? undefined, creadoPor: user!.uid });
+      }
       onGuardado();
       onCerrar();
     } catch {
@@ -57,11 +57,14 @@ export default function FormularioCosecha({ loteId, cicloId, onCerrar, onGuardad
         style={{ backgroundColor: 'var(--surface)' }}
       >
         <h2 className="font-serif mb-1 text-lg font-semibold" style={{ color: 'var(--text)' }}>
-          Registrar cosecha
+          {editando ? 'Editar cosecha' : 'Registrar cosecha'}
         </h2>
-        <p className="mb-4 text-sm" style={{ color: 'var(--text-dim)' }}>
-          Si hoy recogieron más de una calidad, cargá un registro por cada una.
-        </p>
+        {!editando && (
+          <p className="mb-4 text-sm" style={{ color: 'var(--text-dim)' }}>
+            Si hoy recogieron más de una calidad, cargá un registro por cada una.
+          </p>
+        )}
+        {editando && <div className="mb-4" />}
 
         <label className={label} style={{ color: 'var(--text)' }}>
           Fecha <span className="text-red-500">*</span>

@@ -1,9 +1,18 @@
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from './firebase';
+
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 const PENDING_KEY = 'agrodata_fotos_pendientes';
 
-interface FotoPendiente {
+interface DestinoFoto {
+  coleccion: string;
+  docId: string;
+  campo: string;
+}
+
+interface FotoPendiente extends DestinoFoto {
   id: string;
   dataUrl: string;
   creadoEn: number;
@@ -41,31 +50,35 @@ async function subirDataUrl(dataUrl: string): Promise<string> {
   return data.secure_url as string;
 }
 
+function encolarPendiente(dataUrl: string, destino: DestinoFoto) {
+  const pendientes = leerPendientes();
+  pendientes.push({ id: crypto.randomUUID(), dataUrl, creadoEn: Date.now(), ...destino });
+  guardarPendientes(pendientes);
+}
+
 /**
- * Sube una foto de factura. Si no hay conexión (o falla la subida), la
- * guarda localmente y devuelve null — se reintenta sola con reintentarPendientes()
- * cuando vuelve la señal.
+ * Sube una foto (de factura u otro documento) y la asocia al campo indicado
+ * del documento de Firestore. Si no hay conexión o falla la subida, la deja
+ * en una cola local y se reintenta sola con reintentarPendientes() cuando
+ * vuelve la señal — el documento igual queda creado, solo el campo de foto
+ * se completa después.
  */
-export async function subirFoto(file: File): Promise<string | null> {
+export async function subirFoto(file: File, destino: DestinoFoto): Promise<string | null> {
   const dataUrl = await fileToDataUrl(file);
 
   if (!navigator.onLine) {
-    encolarPendiente(dataUrl);
+    encolarPendiente(dataUrl, destino);
     return null;
   }
 
   try {
-    return await subirDataUrl(dataUrl);
+    const url = await subirDataUrl(dataUrl);
+    await updateDoc(doc(db, destino.coleccion, destino.docId), { [destino.campo]: url });
+    return url;
   } catch {
-    encolarPendiente(dataUrl);
+    encolarPendiente(dataUrl, destino);
     return null;
   }
-}
-
-function encolarPendiente(dataUrl: string) {
-  const pendientes = leerPendientes();
-  pendientes.push({ id: crypto.randomUUID(), dataUrl, creadoEn: Date.now() });
-  guardarPendientes(pendientes);
 }
 
 export function cantidadFotosPendientes(): number {
@@ -80,7 +93,8 @@ export async function reintentarPendientes(): Promise<void> {
   const siguenPendientes: FotoPendiente[] = [];
   for (const foto of pendientes) {
     try {
-      await subirDataUrl(foto.dataUrl);
+      const url = await subirDataUrl(foto.dataUrl);
+      await updateDoc(doc(db, foto.coleccion, foto.docId), { [foto.campo]: url });
     } catch {
       siguenPendientes.push(foto);
     }

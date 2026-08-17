@@ -63,10 +63,11 @@ export interface Venta {
   creadoPor: string;
 }
 
+// A propósito sin loteId/cicloId: un mismo insumo suele repartirse entre
+// varios lotes, así que atarlo a uno solo daría un costo por lote falso.
+// Vive como gasto general del negocio en Finanzas, igual que Jornal.
 export interface CompraInsumo {
   id: string;
-  loteId: string;
-  cicloId: string;
   producto: string;
   costo: number;
   fecha: string;

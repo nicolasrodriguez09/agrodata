@@ -1,4 +1,4 @@
-import { collection, addDoc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Cosecha } from '../types/models';
 
@@ -28,5 +28,16 @@ export async function crearCosecha(data: DatosCosecha) {
     cantidad: data.cantidad.trim(),
     calidad: data.calidad || null,
     creadoPor: data.creadoPor,
+  });
+}
+
+export async function actualizarCosecha(
+  id: string,
+  data: Pick<DatosCosecha, 'fecha' | 'cantidad' | 'calidad'>,
+) {
+  await updateDoc(doc(db, 'cosechas', id), {
+    fecha: data.fecha,
+    cantidad: data.cantidad.trim(),
+    calidad: data.calidad || null,
   });
 }
