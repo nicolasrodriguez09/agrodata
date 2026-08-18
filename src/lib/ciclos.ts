@@ -15,6 +15,13 @@ export function escucharCiclosDeLote(loteId: string, callback: (ciclos: Ciclo[])
   });
 }
 
+/** Todos los ciclos de todos los lotes, para el panel de Finanzas (HU-7.1). */
+export function escucharTodosLosCiclos(callback: (ciclos: Ciclo[]) => void) {
+  return onSnapshot(coleccion, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Ciclo, 'id'>) })));
+  });
+}
+
 /** Crea un ciclo abierto y lo deja como el ciclo activo del lote. */
 export async function abrirCiclo(loteId: string, data: { nombre: string; fechaInicio: string }) {
   const nuevo = await addDoc(coleccion, {

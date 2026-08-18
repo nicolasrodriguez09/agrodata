@@ -11,6 +11,13 @@ export function escucharVentasDeCiclo(cicloId: string, callback: (ventas: Venta[
   });
 }
 
+/** Todas las ventas de todos los lotes, para el panel de Finanzas (HU-7.1). */
+export function escucharTodasLasVentas(callback: (ventas: Venta[]) => void) {
+  return onSnapshot(collection(db, 'ventas'), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Venta, 'id'>) })));
+  });
+}
+
 export interface DatosVenta {
   loteId: string;
   cicloId: string;

@@ -23,10 +23,11 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* TODO: gráficas dinámicas (HU-7.1) y rentabilidad por lote (HU-7.2) */}
+      {/* Las gráficas de gastos vs. ventas (HU-7.1) viven en Finanzas > Resumen, a pedido del usuario. */}
+      {/* TODO: rentabilidad por lote (HU-7.2) */}
       <Card className="mt-6 flex flex-col items-center border-dashed p-10 text-center text-stone-400 shadow-none">
         <IconChart className="mb-2 h-6 w-6" />
-        <p className="text-sm">Las gráficas de rentabilidad por lote van acá una vez conectado Firestore.</p>
+        <p className="text-sm">La rentabilidad por lote va acá una vez conectado Firestore.</p>
       </Card>
 
       <h2 className="mt-6 mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">
