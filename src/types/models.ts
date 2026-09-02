@@ -131,6 +131,7 @@ export interface MovimientoInventario {
 // gasto general del negocio en Finanzas, no dentro del resumen de cada ciclo.
 export interface Jornal {
   id: string;
+  loteId?: string; // opcional: solo si el jornal fue claramente para un lote puntual
   trabajador: string;
   quienPago: string;
   labor?: string;

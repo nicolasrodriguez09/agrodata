@@ -4,17 +4,19 @@ import { cargarResumenCiclo, type ResumenCiclo } from '../../lib/resumenCiclo';
 import { escucharVentasDeCiclo } from '../../lib/ventas';
 import { escucharAplicacionesDeCiclo, formatoCantidadAplicacion } from '../../lib/aplicaciones';
 import type { Aplicacion, Ciclo, Lote, Venta } from '../../types/models';
+import type { RentabilidadLote } from '../ResumenFinanzas';
 import { IconArrowLeft, IconDroplet, IconTag } from '../ui/Icons';
 
 interface Props {
   lote: Lote;
   nombreFinca: string;
+  rentabilidad: RentabilidadLote;
   onCerrar: () => void;
 }
 
 const COLOR_GASTO = '#b4552f';
 
-export default function DetalleFinancieroLote({ lote, nombreFinca, onCerrar }: Props) {
+export default function DetalleFinancieroLote({ lote, nombreFinca, rentabilidad, onCerrar }: Props) {
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [cicloSeleccionadoId, setCicloSeleccionadoId] = useState<string | null>(null);
   const [resumen, setResumen] = useState<ResumenCiclo | null>(null);
@@ -78,6 +80,68 @@ export default function DetalleFinancieroLote({ lote, nombreFinca, onCerrar }: P
           {nombreFinca} · {lote.cultivo}
         </p>
 
+        <h2 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+          Rentabilidad del lote
+        </h2>
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <div className="rounded-xl border p-3 text-center" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+              Invertido
+            </p>
+            <p className="font-serif text-sm font-semibold" style={{ color: 'var(--text)' }}>
+              $ {rentabilidad.totalInvertido.toLocaleString('es-CO')}
+            </p>
+          </div>
+          <div className="rounded-xl border p-3 text-center" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+              Vendido
+            </p>
+            <p className="font-serif text-sm font-semibold" style={{ color: 'var(--text)' }}>
+              $ {rentabilidad.totalVendido.toLocaleString('es-CO')}
+            </p>
+          </div>
+          <div
+            className="rounded-xl border p-3 text-center"
+            style={{
+              borderColor: rentabilidad.balance >= 0 ? 'var(--recent)' : COLOR_GASTO,
+              backgroundColor:
+                rentabilidad.balance >= 0
+                  ? 'color-mix(in srgb, var(--recent) 12%, transparent)'
+                  : `color-mix(in srgb, ${COLOR_GASTO} 12%, transparent)`,
+            }}
+          >
+            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+              Balance
+            </p>
+            <p className="font-serif text-sm font-semibold" style={{ color: 'var(--text)' }}>
+              $ {rentabilidad.balance.toLocaleString('es-CO')}
+            </p>
+          </div>
+          <div
+            className="rounded-xl border p-3 text-center"
+            style={{
+              borderColor: (rentabilidad.retornoPct ?? 0) >= 0 ? 'var(--recent)' : COLOR_GASTO,
+              backgroundColor:
+                (rentabilidad.retornoPct ?? 0) >= 0
+                  ? 'color-mix(in srgb, var(--recent) 12%, transparent)'
+                  : `color-mix(in srgb, ${COLOR_GASTO} 12%, transparent)`,
+            }}
+          >
+            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+              % Retorno
+            </p>
+            <p className="font-serif text-sm font-semibold" style={{ color: 'var(--text)' }}>
+              {rentabilidad.retornoPct != null ? `${rentabilidad.retornoPct >= 0 ? '+' : ''}${Math.round(rentabilidad.retornoPct)}%` : '—'}
+            </p>
+          </div>
+        </div>
+        <p className="mb-5 text-xs italic" style={{ color: 'var(--text-dim)' }}>
+          Todo el historial del lote: insumos de sus aplicaciones + jornales marcados con este lote.
+        </p>
+
+        <h2 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+          Detalle por ciclo
+        </h2>
         {ciclosOrdenados.length === 0 ? (
           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
             Este lote todavía no tiene ciclos.
@@ -108,7 +172,7 @@ export default function DetalleFinancieroLote({ lote, nombreFinca, onCerrar }: P
               <div className="mb-5 grid grid-cols-3 gap-2">
                 <div className="rounded-xl border p-3 text-center" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
                   <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                    Gastado
+                    Gastado en insumos
                   </p>
                   <p className="font-serif text-sm font-semibold" style={{ color: 'var(--text)' }}>
                     $ {resumen.totalGastado.toLocaleString('es-CO')}

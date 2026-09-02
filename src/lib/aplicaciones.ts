@@ -18,6 +18,13 @@ export function escucharAplicacionesDeCiclo(cicloId: string, callback: (aplicaci
   });
 }
 
+/** Todas las aplicaciones de todos los lotes, para calcular rentabilidad en Finanzas (HU-7.2). */
+export function escucharTodasLasAplicaciones(callback: (aplicaciones: Aplicacion[]) => void) {
+  return onSnapshot(collection(db, 'aplicaciones'), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Aplicacion, 'id'>) })));
+  });
+}
+
 /** Fecha (YYYY-MM-DD) de la aplicación más reciente de cada lote, para el color en "Mis fincas". */
 export function escucharUltimaAplicacionPorLote(callback: (porLote: Map<string, string>) => void) {
   return onSnapshot(collection(db, 'aplicaciones'), (snap) => {

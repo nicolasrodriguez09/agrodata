@@ -1,6 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { crearJornal } from '../lib/jornales';
+import { escucharLotes } from '../lib/lotes';
+import { escucharFincas } from '../lib/fincas';
 import { useAuth } from '../lib/AuthContext';
+import type { Finca, Lote } from '../types/models';
 
 interface Props {
   onCerrar: () => void;
@@ -15,6 +18,9 @@ const OPCIONES_QUIEN_PAGO = ['Freddy', 'Emerson', 'Otro'];
 
 export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
+  const [lotes, setLotes] = useState<Lote[]>([]);
+  const [fincas, setFincas] = useState<Finca[]>([]);
+  const [loteId, setLoteId] = useState('');
   const [trabajador, setTrabajador] = useState('');
   const [labor, setLabor] = useState('');
   const [fecha, setFecha] = useState(hoyISO());
@@ -26,6 +32,14 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
   const [pagado, setPagado] = useState<boolean | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => escucharLotes(setLotes), []);
+  useEffect(() => escucharFincas(setFincas), []);
+
+  function nombreFinca(fincaId: string | null) {
+    if (fincaId === null) return 'Suelto';
+    return fincas.find((f) => f.id === fincaId)?.nombre ?? 'Finca borrada';
+  }
 
   const cantidadNum = Number(cantidad) || 0;
   const tarifaNum = Number(tarifa) || 0;
@@ -50,6 +64,7 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
     try {
       const quienPago = quienPagoOpcion === 'Otro' ? otroNombre.trim() : quienPagoOpcion;
       await crearJornal({
+        loteId: loteId || undefined,
         trabajador,
         quienPago,
         labor: labor || undefined,
@@ -106,6 +121,23 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
           className={campo}
           style={campoEstilo}
         />
+
+        <label className={label} style={{ color: 'var(--text)' }}>
+          Lote (opcional)
+        </label>
+        <select
+          value={loteId}
+          onChange={(e) => setLoteId(e.target.value)}
+          className={campo}
+          style={campoEstilo}
+        >
+          <option value="">Sin lote / varios lotes</option>
+          {lotes.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.nombre} · {nombreFinca(l.fincaId)}
+            </option>
+          ))}
+        </select>
 
         <label className={label} style={{ color: 'var(--text)' }}>
           Fecha <span className="text-red-500">*</span>

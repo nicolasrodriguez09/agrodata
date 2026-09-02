@@ -5,8 +5,9 @@ import { escucharJornales } from '../lib/jornales';
 import { escucharLotes } from '../lib/lotes';
 import { escucharFincas } from '../lib/fincas';
 import { escucharTodosLosCiclos } from '../lib/ciclos';
+import { escucharTodasLasAplicaciones } from '../lib/aplicaciones';
 import { useCountUp } from '../lib/useCountUp';
-import type { Ciclo, CompraInsumo, Finca, Jornal, Lote, Venta } from '../types/models';
+import type { Aplicacion, Ciclo, CompraInsumo, Finca, Jornal, Lote, Venta } from '../types/models';
 import GraficaLineas from './finanzas/GraficaLineas';
 import BarraComposicion from './finanzas/BarraComposicion';
 import RankingBarras from './finanzas/RankingBarras';
@@ -37,6 +38,15 @@ const VISTAS: { id: Vista; label: string }[] = [
   { id: 'ciclos', label: 'Ciclos' },
 ];
 
+export interface RentabilidadLote {
+  totalVendido: number;
+  totalInsumos: number;
+  totalJornales: number;
+  totalInvertido: number;
+  balance: number;
+  retornoPct: number | null;
+}
+
 function TarjetaTotal({ label, valor, tono }: { label: string; valor: number; tono?: 'positivo' | 'negativo' }) {
   const animado = useCountUp(valor);
   const color =
@@ -57,6 +67,7 @@ export default function ResumenFinanzas() {
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [compras, setCompras] = useState<CompraInsumo[]>([]);
   const [jornales, setJornales] = useState<Jornal[]>([]);
+  const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([]);
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [fincas, setFincas] = useState<Finca[]>([]);
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
@@ -70,6 +81,7 @@ export default function ResumenFinanzas() {
   useEffect(() => escucharTodasLasVentas(setVentas), []);
   useEffect(() => escucharCompras(setCompras), []);
   useEffect(() => escucharJornales(setJornales), []);
+  useEffect(() => escucharTodasLasAplicaciones(setAplicaciones), []);
   useEffect(() => escucharLotes(setLotes), []);
   useEffect(() => escucharFincas(setFincas), []);
   useEffect(() => escucharTodosLosCiclos(setCiclos), []);
@@ -129,16 +141,43 @@ export default function ResumenFinanzas() {
   const totalCobradoTiempo = ventasTiempo.filter((v) => v.cobrado).reduce((s, v) => s + v.precio, 0);
   const totalPendienteTiempo = totalVendidoTiempo - totalCobradoTiempo;
 
-  // --- Ventas por lote ---
-  const ventasPorLote = new Map<string, number>();
-  ventas.forEach((v) => ventasPorLote.set(v.loteId, (ventasPorLote.get(v.loteId) ?? 0) + v.precio));
-  const rankingLotes = Array.from(ventasPorLote.entries())
-    .map(([loteId, total]) => {
-      const lote = lotes.find((l) => l.id === loteId);
-      return { id: loteId, label: lote?.nombre ?? 'Lote borrado', sublabel: lote ? nombreFinca(lote.fincaId) : undefined, valor: total };
+  // --- Rentabilidad por lote (HU-7.2): todo el historial del lote, no un ciclo puntual.
+  // Insumos son exactos (costoEstimado de cada aplicación). Jornales solo cuentan si se
+  // marcaron con ese lote al registrarlos — los genéricos/compartidos quedan afuera.
+  const rentabilidadPorLote = new Map<string, RentabilidadLote>();
+  for (const lote of lotes) {
+    const totalVendido = ventas.filter((v) => v.loteId === lote.id).reduce((s, v) => s + v.precio, 0);
+    const totalInsumos = aplicaciones
+      .filter((a) => a.loteId === lote.id)
+      .reduce((s, a) => s + (a.costoEstimado ?? 0), 0);
+    const totalJornales = jornales.filter((j) => j.loteId === lote.id).reduce((s, j) => s + j.valor, 0);
+    const totalInvertido = totalInsumos + totalJornales;
+    const balance = totalVendido - totalInvertido;
+    rentabilidadPorLote.set(lote.id, {
+      totalVendido,
+      totalInsumos,
+      totalJornales,
+      totalInvertido,
+      balance,
+      retornoPct: totalInvertido > 0 ? (balance / totalInvertido) * 100 : null,
+    });
+  }
+  const rankingLotes = lotes
+    .filter((l) => {
+      const r = rentabilidadPorLote.get(l.id);
+      return !!r && (r.totalVendido > 0 || r.totalInvertido > 0);
     })
-    .sort((a, b) => b.valor - a.valor)
-    .slice(0, TOP_N);
+    .map((l) => {
+      const r = rentabilidadPorLote.get(l.id)!;
+      return {
+        id: l.id,
+        label: l.nombre,
+        sublabel: nombreFinca(l.fincaId),
+        valor: r.balance,
+        extra: r.retornoPct != null ? `${r.retornoPct >= 0 ? '+' : ''}${Math.round(r.retornoPct)}%` : undefined,
+      };
+    })
+    .sort((a, b) => b.valor - a.valor);
 
   // --- Ventas por ciclo ---
   const ventasPorCiclo = new Map<string, number>();
@@ -293,14 +332,26 @@ export default function ResumenFinanzas() {
         </div>
       )}
 
-      {vista === 'lotes' &&
-        (rankingLotes.length > 0 ? (
-          <RankingBarras filas={rankingLotes} onFilaClick={setLoteSeleccionadoId} />
-        ) : (
-          <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-            Todavía no hay ventas registradas por lote.
-          </p>
-        ))}
+      {vista === 'lotes' && (
+        <div>
+          <h3 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+            Rentabilidad por lote
+          </h3>
+          {rankingLotes.length > 0 ? (
+            <>
+              <RankingBarras filas={rankingLotes} onFilaClick={setLoteSeleccionadoId} />
+              <p className="mt-3 text-xs italic" style={{ color: 'var(--text-dim)' }}>
+                Incluye insumos de cada aplicación y los jornales que marcaste con ese lote. Los
+                jornales sin lote asignado no se cuentan acá.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+              Todavía no hay ventas ni gastos registrados por lote.
+            </p>
+          )}
+        </div>
+      )}
 
       {vista === 'ciclos' &&
         (rankingCiclos.length > 0 ? (
@@ -339,10 +390,19 @@ export default function ResumenFinanzas() {
         (() => {
           const lote = lotes.find((l) => l.id === loteSeleccionadoId);
           if (!lote) return null;
+          const rentabilidad = rentabilidadPorLote.get(lote.id) ?? {
+            totalVendido: 0,
+            totalInsumos: 0,
+            totalJornales: 0,
+            totalInvertido: 0,
+            balance: 0,
+            retornoPct: null,
+          };
           return (
             <DetalleFinancieroLote
               lote={lote}
               nombreFinca={nombreFinca(lote.fincaId)}
+              rentabilidad={rentabilidad}
               onCerrar={() => setLoteSeleccionadoId(null)}
             />
           );

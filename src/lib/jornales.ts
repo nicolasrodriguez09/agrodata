@@ -12,6 +12,7 @@ export function escucharJornales(callback: (jornales: Jornal[]) => void) {
 }
 
 export interface DatosJornal {
+  loteId?: string;
   trabajador: string;
   quienPago: string;
   labor?: string;
@@ -25,6 +26,7 @@ export interface DatosJornal {
 
 export async function crearJornal(data: DatosJornal) {
   await addDoc(collection(db, 'jornales'), {
+    loteId: data.loteId || null,
     trabajador: data.trabajador.trim(),
     quienPago: data.quienPago.trim(),
     labor: data.labor?.trim() || null,

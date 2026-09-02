@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { escucharCompras } from '../lib/compras';
 import { escucharJornales } from '../lib/jornales';
 import { escucharInsumos, crearInsumo } from '../lib/insumos';
+import { escucharLotes } from '../lib/lotes';
 import { useAuth } from '../lib/AuthContext';
-import type { CompraInsumo, InsumoInventario, Jornal } from '../types/models';
+import type { CompraInsumo, InsumoInventario, Jornal, Lote } from '../types/models';
 import EmptyState from '../components/ui/EmptyState';
 import FormularioCompra from '../components/FormularioCompra';
 import DetalleCompra from '../components/DetalleCompra';
@@ -38,10 +39,12 @@ export default function Finanzas() {
   const [nombreInsumoNuevo, setNombreInsumoNuevo] = useState('');
   const [unidadInsumoNuevo, setUnidadInsumoNuevo] = useState('');
   const [creandoInsumo, setCreandoInsumo] = useState(false);
+  const [lotes, setLotes] = useState<Lote[]>([]);
 
   useEffect(() => escucharCompras(setCompras), []);
   useEffect(() => escucharJornales(setJornales), []);
   useEffect(() => escucharInsumos(setInsumos), []);
+  useEffect(() => escucharLotes(setLotes), []);
 
   async function handleCrearInsumo() {
     if (!nombreInsumoNuevo.trim() || !unidadInsumoNuevo.trim()) return;
@@ -248,7 +251,7 @@ export default function Finanzas() {
             ) : (
               <div className="flex flex-col gap-2">
                 {jornalesFiltrados.map((j) => (
-                  <FilaJornal key={j.id} jornal={j} />
+                  <FilaJornal key={j.id} jornal={j} lotes={lotes} />
                 ))}
               </div>
             )}

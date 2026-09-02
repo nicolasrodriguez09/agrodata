@@ -1,6 +1,7 @@
-import type { Jornal } from '../../types/models';
+import type { Jornal, Lote } from '../../types/models';
 
-export default function FilaJornal({ jornal }: { jornal: Jornal }) {
+export default function FilaJornal({ jornal, lotes }: { jornal: Jornal; lotes?: Lote[] }) {
+  const lote = jornal.loteId ? lotes?.find((l) => l.id === jornal.loteId) : undefined;
   return (
     <div className="rounded-xl border p-3.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
       <div className="flex items-center justify-between gap-2">
@@ -17,6 +18,7 @@ export default function FilaJornal({ jornal }: { jornal: Jornal }) {
           {jornal.labor ? ` · ${jornal.labor}` : ''} · {jornal.cantidad}{' '}
           {jornal.unidad === 'dia' ? (jornal.cantidad === 1 ? 'día' : 'días') : jornal.cantidad === 1 ? 'hora' : 'horas'} · pagó{' '}
           {jornal.quienPago}
+          {lote ? ` · ${lote.nombre}` : ''}
         </p>
         <span
           className="flex-none rounded-full px-2 py-0.5 text-xs font-medium"
