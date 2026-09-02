@@ -11,6 +11,13 @@ export function escucharCosechasDeCiclo(cicloId: string, callback: (cosechas: Co
   });
 }
 
+/** Todas las cosechas de todos los lotes, para la búsqueda global del Panel (HU-7.3). */
+export function escucharTodasLasCosechas(callback: (cosechas: Cosecha[]) => void) {
+  return onSnapshot(collection(db, 'cosechas'), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Cosecha, 'id'>) })));
+  });
+}
+
 export interface DatosCosecha {
   loteId: string;
   cicloId: string;

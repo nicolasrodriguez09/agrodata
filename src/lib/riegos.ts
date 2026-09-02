@@ -11,6 +11,13 @@ export function escucharRiegosDeCiclo(cicloId: string, callback: (riegos: Riego[
   });
 }
 
+/** Todos los riegos de todos los lotes, para la búsqueda global del Panel (HU-7.3). */
+export function escucharTodosLosRiegos(callback: (riegos: Riego[]) => void) {
+  return onSnapshot(collection(db, 'riegos'), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Riego, 'id'>) })));
+  });
+}
+
 export interface DatosRiego {
   loteId: string;
   cicloId: string;

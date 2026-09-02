@@ -10,6 +10,7 @@ import LoteDetalle from './pages/LoteDetalle';
 import Finanzas from './pages/Finanzas';
 import Admin from './pages/Admin';
 import Fincas from './pages/Fincas';
+import Reporte from './pages/Reporte';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -27,6 +28,14 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route
+        path="/reporte"
+        element={
+          <RequireAuth>
+            <Reporte />
+          </RequireAuth>
+        }
+      />
       <Route
         element={
           <RequireAuth>

@@ -319,9 +319,18 @@ export default function LoteDetalle() {
 
       {cicloSeleccionado && (
         <>
-          <h2 className="font-display mt-6 mb-3 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
-            Resumen del ciclo
-          </h2>
+          <div className="mt-6 mb-3 flex items-center justify-between gap-2">
+            <h2 className="font-display text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+              Resumen del ciclo
+            </h2>
+            <Link
+              to={`/reporte?loteId=${lote.id}&cicloId=${cicloSeleccionado.id}`}
+              className="text-xs font-medium underline underline-offset-2"
+              style={{ color: 'var(--gold)' }}
+            >
+              Generar reporte
+            </Link>
+          </div>
           {!resumen ? (
             <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
               Cargando...
