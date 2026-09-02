@@ -7,12 +7,14 @@ import { cargarResumenCiclo, type ResumenCiclo } from '../lib/resumenCiclo';
 import { escucharAplicacionesDeCiclo, formatoCantidadAplicacion } from '../lib/aplicaciones';
 import { escucharCosechasDeCiclo } from '../lib/cosechas';
 import { escucharVentasDeCiclo } from '../lib/ventas';
-import type { Aplicacion, Ciclo, Cosecha, Finca, Lote, Venta } from '../types/models';
+import { escucharRiegosDeCiclo } from '../lib/riegos';
+import type { Aplicacion, Ciclo, Cosecha, Finca, Lote, Riego, Venta } from '../types/models';
 import FormularioLote from '../components/FormularioLote';
 import FormularioCiclo from '../components/FormularioCiclo';
 import FormularioAplicacion from '../components/FormularioAplicacion';
 import FormularioCosecha from '../components/FormularioCosecha';
 import FormularioVenta from '../components/FormularioVenta';
+import FormularioRiego from '../components/FormularioRiego';
 import CalendarioActividad from '../components/CalendarioActividad';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoDialog from '../components/ui/InfoDialog';
@@ -21,6 +23,7 @@ import {
   IconDroplet,
   IconBasket,
   IconTag,
+  IconWaves,
   IconPencil,
   IconTrash,
   IconSearch,
@@ -29,6 +32,7 @@ import {
 const acciones = [
   { id: 'aplicacion', label: 'Aplicación de insumo', Icon: IconDroplet },
   { id: 'cosecha', label: 'Registrar cosecha', Icon: IconBasket },
+  { id: 'riego', label: 'Registrar riego', Icon: IconWaves },
   { id: 'venta', label: 'Registrar venta', Icon: IconTag },
 ] as const;
 
@@ -48,14 +52,17 @@ export default function LoteDetalle() {
   const [mostrarFormAplicacion, setMostrarFormAplicacion] = useState(false);
   const [mostrarFormCosecha, setMostrarFormCosecha] = useState(false);
   const [mostrarFormVenta, setMostrarFormVenta] = useState(false);
+  const [mostrarFormRiego, setMostrarFormRiego] = useState(false);
   const [editandoAplicacion, setEditandoAplicacion] = useState<Aplicacion | null>(null);
   const [editandoCosecha, setEditandoCosecha] = useState<Cosecha | null>(null);
+  const [editandoRiego, setEditandoRiego] = useState<Riego | null>(null);
   const [avisoSinCiclo, setAvisoSinCiclo] = useState(false);
   const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([]);
   const [cosechas, setCosechas] = useState<Cosecha[]>([]);
+  const [riegos, setRiegos] = useState<Riego[]>([]);
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [filtroTexto, setFiltroTexto] = useState('');
-  const [filtroTipo, setFiltroTipo] = useState<'todo' | 'aplicacion' | 'cosecha'>('todo');
+  const [filtroTipo, setFiltroTipo] = useState<'todo' | 'aplicacion' | 'cosecha' | 'riego'>('todo');
   const [vistaHistorial, setVistaHistorial] = useState<'lista' | 'calendario'>('lista');
 
   useEffect(() => {
@@ -109,6 +116,14 @@ export default function LoteDetalle() {
 
   useEffect(() => {
     if (!cicloSeleccionadoId) {
+      setRiegos([]);
+      return;
+    }
+    return escucharRiegosDeCiclo(cicloSeleccionadoId, setRiegos);
+  }, [cicloSeleccionadoId]);
+
+  useEffect(() => {
+    if (!cicloSeleccionadoId) {
       setVentas([]);
       return;
     }
@@ -153,6 +168,7 @@ export default function LoteDetalle() {
     }
     if (id === 'aplicacion') setMostrarFormAplicacion(true);
     if (id === 'cosecha') setMostrarFormCosecha(true);
+    if (id === 'riego') setMostrarFormRiego(true);
     if (id === 'venta') setMostrarFormVenta(true);
   }
 
@@ -346,6 +362,14 @@ export default function LoteDetalle() {
               </div>
               <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Riegos
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  {resumen.riegos}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
                   Gastado en insumos
                 </p>
                 <p className="font-medium" style={{ color: 'var(--text)' }}>
@@ -410,9 +434,11 @@ export default function LoteDetalle() {
         const items: Array<
           | { tipo: 'aplicacion'; id: string; fecha: string; data: Aplicacion }
           | { tipo: 'cosecha'; id: string; fecha: string; data: Cosecha }
+          | { tipo: 'riego'; id: string; fecha: string; data: Riego }
         > = [
           ...aplicaciones.map((a) => ({ tipo: 'aplicacion' as const, id: a.id, fecha: a.fecha, data: a })),
           ...cosechas.map((c) => ({ tipo: 'cosecha' as const, id: c.id, fecha: c.fecha, data: c })),
+          ...riegos.map((r) => ({ tipo: 'riego' as const, id: r.id, fecha: r.fecha, data: r })),
         ].sort((x, y) => y.fecha.localeCompare(x.fecha));
 
         const hayAlgo = items.length > 0;
@@ -421,7 +447,8 @@ export default function LoteDetalle() {
         const itemsFiltrados = itemsPorTipo.filter((i) => {
           if (!texto) return true;
           if (i.tipo === 'aplicacion') return i.data.producto.toLowerCase().includes(texto);
-          return (i.data.calidad ?? '').toLowerCase().includes(texto);
+          if (i.tipo === 'cosecha') return (i.data.calidad ?? '').toLowerCase().includes(texto);
+          return (i.data.metodo ?? '').toLowerCase().includes(texto) || i.data.responsable.toLowerCase().includes(texto);
         });
 
         return (
@@ -455,14 +482,14 @@ export default function LoteDetalle() {
 
             {!hayAlgo ? (
               <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                Todavía no hay aplicaciones ni cosechas registradas en este ciclo.
+                Todavía no hay aplicaciones, cosechas ni riegos registrados en este ciclo.
               </p>
             ) : vistaHistorial === 'calendario' ? (
-              <CalendarioActividad aplicaciones={aplicaciones} cosechas={cosechas} />
+              <CalendarioActividad aplicaciones={aplicaciones} cosechas={cosechas} riegos={riegos} />
             ) : (
               <>
                 <div className="mb-3 flex gap-2">
-                  {(['todo', 'aplicacion', 'cosecha'] as const).map((t) => (
+                  {(['todo', 'aplicacion', 'cosecha', 'riego'] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setFiltroTipo(t)}
@@ -473,7 +500,7 @@ export default function LoteDetalle() {
                           : { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }
                       }
                     >
-                      {t === 'todo' ? 'Todo' : t === 'aplicacion' ? 'Aplicaciones' : 'Cosechas'}
+                      {t === 'todo' ? 'Todo' : t === 'aplicacion' ? 'Aplicaciones' : t === 'cosecha' ? 'Cosechas' : 'Riegos'}
                     </button>
                   ))}
                 </div>
@@ -486,7 +513,7 @@ export default function LoteDetalle() {
                   <input
                     value={filtroTexto}
                     onChange={(e) => setFiltroTexto(e.target.value)}
-                    placeholder="Buscar por producto o calidad..."
+                    placeholder="Buscar por producto, calidad o método..."
                     className="w-full rounded-xl border py-2.5 pr-3 pl-9 text-sm focus:outline-none"
                     style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text)' }}
                   />
@@ -502,9 +529,11 @@ export default function LoteDetalle() {
                       <button
                         key={`${item.tipo}-${item.id}`}
                         type="button"
-                        onClick={() =>
-                          item.tipo === 'aplicacion' ? setEditandoAplicacion(item.data) : setEditandoCosecha(item.data)
-                        }
+                        onClick={() => {
+                          if (item.tipo === 'aplicacion') setEditandoAplicacion(item.data);
+                          else if (item.tipo === 'cosecha') setEditandoCosecha(item.data);
+                          else setEditandoRiego(item.data);
+                        }}
                         className="flex gap-3 rounded-xl border p-3.5 text-left transition hover:brightness-95 active:scale-[0.99]"
                         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                       >
@@ -513,19 +542,27 @@ export default function LoteDetalle() {
                           style={
                             item.tipo === 'aplicacion'
                               ? { backgroundColor: 'var(--recent)', color: 'var(--recent-text)' }
-                              : { backgroundColor: 'var(--cosecha)', color: 'var(--cosecha-text)' }
+                              : item.tipo === 'cosecha'
+                                ? { backgroundColor: 'var(--cosecha)', color: 'var(--cosecha-text)' }
+                                : { backgroundColor: 'var(--riego)', color: 'var(--riego-text)' }
                           }
                         >
                           {item.tipo === 'aplicacion' ? (
                             <IconDroplet className="h-4.5 w-4.5" />
-                          ) : (
+                          ) : item.tipo === 'cosecha' ? (
                             <IconBasket className="h-4.5 w-4.5" />
+                          ) : (
+                            <IconWaves className="h-4.5 w-4.5" />
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-serif font-semibold" style={{ color: 'var(--text)' }}>
-                              {item.tipo === 'aplicacion' ? item.data.producto : `Cosecha: ${item.data.cantidad}`}
+                              {item.tipo === 'aplicacion'
+                                ? item.data.producto
+                                : item.tipo === 'cosecha'
+                                  ? `Cosecha: ${item.data.cantidad}`
+                                  : `Riego${item.data.metodo ? `: ${item.data.metodo}` : ''}`}
                             </p>
                             <p className="flex-none text-xs" style={{ color: 'var(--text-dim)' }}>
                               {item.fecha}
@@ -534,7 +571,9 @@ export default function LoteDetalle() {
                           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
                             {item.tipo === 'aplicacion'
                               ? `${formatoCantidadAplicacion(item.data)}${item.data.dosis ? ` · ${item.data.dosis}` : ''} · aplicó ${item.data.responsable}`
-                              : (item.data.calidad ?? 'Sin clasificar')}
+                              : item.tipo === 'cosecha'
+                                ? (item.data.calidad ?? 'Sin clasificar')
+                                : `${item.data.duracion ? `${item.data.duracion} · ` : ''}regó ${item.data.responsable}`}
                           </p>
                         </div>
                         <IconPencil
@@ -650,6 +689,14 @@ export default function LoteDetalle() {
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />
       )}
+      {mostrarFormRiego && cicloActivo && (
+        <FormularioRiego
+          loteId={lote.id}
+          cicloId={cicloActivo.id}
+          onCerrar={() => setMostrarFormRiego(false)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
       {editandoAplicacion && (
         <FormularioAplicacion
           loteId={editandoAplicacion.loteId}
@@ -668,11 +715,20 @@ export default function LoteDetalle() {
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />
       )}
+      {editandoRiego && (
+        <FormularioRiego
+          loteId={editandoRiego.loteId}
+          cicloId={editandoRiego.cicloId}
+          riegoExistente={editandoRiego}
+          onCerrar={() => setEditandoRiego(null)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
 
       <InfoDialog
         open={avisoSinCiclo}
         title="Primero abrí un ciclo"
-        description="Para registrar aplicaciones, cosechas o ventas, este lote necesita un ciclo activo."
+        description="Para registrar aplicaciones, cosechas, riegos o ventas, este lote necesita un ciclo activo."
         tono="error"
         onClose={() => setAvisoSinCiclo(false)}
       />

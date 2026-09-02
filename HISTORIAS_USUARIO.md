@@ -18,6 +18,9 @@ y en PC.
 - **Necesitan**: buscadores con filtros (jornales, aplicaciones, facturas), fotos de factura,
   separación de todo por ciclo, y a futuro posible integración/exportación a Excel.
 - **Riego/lluvia**: descartado por ahora, no se incluye en esta versión.
+  > **Revisado:** se agregó el registro de riego (fecha, duración, método, quién regó) como una
+  > acción más del lote, con edición y visible en el calendario del ciclo junto a aplicaciones y
+  > cosechas. Ver `src/lib/riegos.ts`.
 
 ## Decisión de modelo: qué es un "ciclo"
 
@@ -200,7 +203,8 @@ puedan iniciar sesión y cargar información, para mantener el control de quién
 | **Must (MVP)** | 1 (Fincas/Lotes), 2 (Ciclos), 3 (Aplicaciones), 4 (Cosecha/Venta), 5 (Compras+Factura), 6 (Jornales), 8 (Acceso) |
 | **Should** | 7.1-7.3 (Dashboard, rentabilidad, búsqueda global) |
 | **Could** | 7.4 (Vista para crédito/auditor) |
-| **Won't (por ahora)** | 3.3 (alertas de carencia), 7.5 (Excel), riego/lluvia |
+| **Won't (por ahora)** | 3.3 (alertas de carencia), 7.5 (Excel), lluvia |
+| **Agregado luego del MVP** | Inventario de insumos con costeo (ver nota en "Decisión de alcance"), registro de riego |
 
 El balance por ciclo (HU-2.3 / HU-7.2) y el respaldo de facturas con foto (HU-5.2) son los dos
 puntos que más valor le dan al proyecto: hoy no saben cuánto ganan ni tienen cómo respaldar un

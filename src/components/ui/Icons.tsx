@@ -143,6 +143,16 @@ export function IconDroplet(props: IconProps) {
   );
 }
 
+export function IconWaves(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M2 8c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0 3-1.5 4.5 0 3 1.5 4.5 0" />
+      <path d="M2 13c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0 3-1.5 4.5 0 3 1.5 4.5 0" />
+      <path d="M2 18c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0 3-1.5 4.5 0 3 1.5 4.5 0" />
+    </svg>
+  );
+}
+
 export function IconBasket(props: IconProps) {
   return (
     <svg {...base} {...props}>

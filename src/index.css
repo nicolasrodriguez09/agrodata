@@ -46,6 +46,8 @@
   --sueltos: #78716c;
   --cosecha: #2f6690;
   --cosecha-text: #f2f6fa;
+  --riego: #1f8a7a;
+  --riego-text: #f2faf8;
 }
 
 .dark {
@@ -70,6 +72,8 @@
   --sueltos: #a8a29e;
   --cosecha: #5b93c4;
   --cosecha-text: #0b1721;
+  --riego: #4bb3a1;
+  --riego-text: #08201b;
 }
 
 html,

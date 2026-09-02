@@ -4,6 +4,7 @@ import { db } from './firebase';
 export interface ResumenCiclo {
   aplicaciones: number;
   cosechas: number;
+  riegos: number;
   totalGastado: number;
   totalVendido: number;
   balance: number;
@@ -21,9 +22,10 @@ async function contar(coleccion: string, cicloId: string) {
  * así que no entran acá, viven aparte en Finanzas.
  */
 export async function cargarResumenCiclo(cicloId: string): Promise<ResumenCiclo> {
-  const [aplicaciones, cosechas, ventas] = await Promise.all([
+  const [aplicaciones, cosechas, riegos, ventas] = await Promise.all([
     contar('aplicaciones', cicloId),
     contar('cosechas', cicloId),
+    contar('riegos', cicloId),
     contar('ventas', cicloId),
   ]);
 
@@ -33,6 +35,7 @@ export async function cargarResumenCiclo(cicloId: string): Promise<ResumenCiclo>
   return {
     aplicaciones: aplicaciones.length,
     cosechas: cosechas.length,
+    riegos: riegos.length,
     totalGastado,
     totalVendido,
     balance: totalVendido - totalGastado,

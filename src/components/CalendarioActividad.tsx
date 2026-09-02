@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { Aplicacion, Cosecha } from '../types/models';
+import type { Aplicacion, Cosecha, Riego } from '../types/models';
 import { formatoCantidadAplicacion } from '../lib/aplicaciones';
 import { IconChevronRight } from './ui/Icons';
 
@@ -21,10 +21,11 @@ function hoyISO() {
 interface Props {
   aplicaciones: Aplicacion[];
   cosechas: Cosecha[];
+  riegos: Riego[];
 }
 
-export default function CalendarioActividad({ aplicaciones, cosechas }: Props) {
-  const todasLasFechas = [...aplicaciones.map((a) => a.fecha), ...cosechas.map((c) => c.fecha)].sort();
+export default function CalendarioActividad({ aplicaciones, cosechas, riegos }: Props) {
+  const todasLasFechas = [...aplicaciones.map((a) => a.fecha), ...cosechas.map((c) => c.fecha), ...riegos.map((r) => r.fecha)].sort();
   const primerFecha = todasLasFechas[todasLasFechas.length - 1] ?? hoyISO();
   const [year, setYear] = useState(Number(primerFecha.slice(0, 4)));
   const [month, setMonth] = useState(Number(primerFecha.slice(5, 7)) - 1);
@@ -41,6 +42,12 @@ export default function CalendarioActividad({ aplicaciones, cosechas }: Props) {
     for (const c of cosechas) mapa.set(c.fecha, [...(mapa.get(c.fecha) ?? []), c]);
     return mapa;
   }, [cosechas]);
+
+  const riegosPorDia = useMemo(() => {
+    const mapa = new Map<string, Riego[]>();
+    for (const r of riegos) mapa.set(r.fecha, [...(mapa.get(r.fecha) ?? []), r]);
+    return mapa;
+  }, [riegos]);
 
   const celdas = useMemo(() => {
     const primerDia = new Date(year, month, 1);
@@ -70,6 +77,7 @@ export default function CalendarioActividad({ aplicaciones, cosechas }: Props) {
   const hoy = hoyISO();
   const aplicacionesDelDia = diaSeleccionado ? (aplicacionesPorDia.get(diaSeleccionado) ?? []) : [];
   const cosechasDelDia = diaSeleccionado ? (cosechasPorDia.get(diaSeleccionado) ?? []) : [];
+  const riegosDelDia = diaSeleccionado ? (riegosPorDia.get(diaSeleccionado) ?? []) : [];
 
   return (
     <div>
@@ -104,23 +112,25 @@ export default function CalendarioActividad({ aplicaciones, cosechas }: Props) {
         {celdas.map((dia, i) => {
           if (dia === null) return <div key={i} />;
           const fecha = iso(year, month, dia);
-          const hayAplicacion = aplicacionesPorDia.has(fecha);
-          const hayCosecha = cosechasPorDia.has(fecha);
           const esHoy = fecha === hoy;
           const seleccionado = fecha === diaSeleccionado;
+
+          const tiposPresentes: { color: string; colorTexto: string }[] = [];
+          if (aplicacionesPorDia.has(fecha)) tiposPresentes.push({ color: 'var(--recent)', colorTexto: 'var(--recent-text)' });
+          if (cosechasPorDia.has(fecha)) tiposPresentes.push({ color: 'var(--cosecha)', colorTexto: 'var(--cosecha-text)' });
+          if (riegosPorDia.has(fecha)) tiposPresentes.push({ color: 'var(--riego)', colorTexto: 'var(--riego-text)' });
 
           let backgroundColor = 'transparent';
           let backgroundImage: string | undefined;
           let color = 'var(--text)';
-          if (hayAplicacion && hayCosecha) {
-            backgroundImage = `linear-gradient(90deg, var(--recent) 50%, var(--cosecha) 50%)`;
-            color = 'var(--recent-text)';
-          } else if (hayAplicacion) {
-            backgroundColor = 'var(--recent)';
-            color = 'var(--recent-text)';
-          } else if (hayCosecha) {
-            backgroundColor = 'var(--cosecha)';
-            color = 'var(--cosecha-text)';
+          if (tiposPresentes.length === 1) {
+            backgroundColor = tiposPresentes[0].color;
+            color = tiposPresentes[0].colorTexto;
+          } else if (tiposPresentes.length > 1) {
+            const paso = 100 / tiposPresentes.length;
+            const paradas = tiposPresentes.map((t, idx) => `${t.color} ${idx * paso}% ${(idx + 1) * paso}%`).join(', ');
+            backgroundImage = `linear-gradient(90deg, ${paradas})`;
+            color = tiposPresentes[0].colorTexto;
           }
 
           return (
@@ -154,6 +164,10 @@ export default function CalendarioActividad({ aplicaciones, cosechas }: Props) {
           <span className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--cosecha)' }} />
           Cosecha
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--riego)' }} />
+          Riego
+        </span>
       </div>
 
       {diaSeleccionado && (
@@ -161,7 +175,7 @@ export default function CalendarioActividad({ aplicaciones, cosechas }: Props) {
           <p className="font-display text-[11px] font-black tracking-wide uppercase" style={{ color: 'var(--text-dim)' }}>
             {diaSeleccionado}
           </p>
-          {aplicacionesDelDia.length === 0 && cosechasDelDia.length === 0 ? (
+          {aplicacionesDelDia.length === 0 && cosechasDelDia.length === 0 && riegosDelDia.length === 0 ? (
             <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
               Nada registrado este día.
             </p>
@@ -196,6 +210,20 @@ export default function CalendarioActividad({ aplicaciones, cosechas }: Props) {
                       {c.calidad}
                     </p>
                   )}
+                </div>
+              ))}
+              {riegosDelDia.map((r) => (
+                <div
+                  key={r.id}
+                  className="rounded-xl border p-3"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+                >
+                  <p className="font-serif font-semibold" style={{ color: 'var(--text)' }}>
+                    Riego{r.metodo ? `: ${r.metodo}` : ''}
+                  </p>
+                  <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                    {r.duracion ? `${r.duracion} · ` : ''}regó {r.responsable}
+                  </p>
                 </div>
               ))}
             </>

@@ -54,6 +54,17 @@ export interface Cosecha {
   creadoPor: string;
 }
 
+export interface Riego {
+  id: string;
+  loteId: string;
+  cicloId: string;
+  fecha: string;
+  duracion?: string; // texto libre: "2 horas", "toda la mañana", etc.
+  metodo?: string; // ej. "Aspersión", "Goteo", "Manual"
+  responsable: string;
+  creadoPor: string;
+}
+
 export interface Venta {
   id: string;
   loteId: string;
