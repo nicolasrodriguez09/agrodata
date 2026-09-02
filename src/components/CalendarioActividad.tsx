@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Aplicacion, Cosecha } from '../types/models';
+import { formatoCantidadAplicacion } from '../lib/aplicaciones';
 import { IconChevronRight } from './ui/Icons';
 
 const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -176,7 +177,7 @@ export default function CalendarioActividad({ aplicaciones, cosechas }: Props) {
                     {a.producto}
                   </p>
                   <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                    {a.cantidad}
+                    {formatoCantidadAplicacion(a)}
                     {a.dosis ? ` · ${a.dosis}` : ''} · aplicó {a.responsable}
                   </p>
                 </div>

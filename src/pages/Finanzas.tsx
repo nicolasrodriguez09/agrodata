@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { escucharCompras } from '../lib/compras';
 import { escucharJornales } from '../lib/jornales';
-import type { CompraInsumo, Jornal } from '../types/models';
+import { escucharInsumos, crearInsumo } from '../lib/insumos';
+import { useAuth } from '../lib/AuthContext';
+import type { CompraInsumo, InsumoInventario, Jornal } from '../types/models';
 import EmptyState from '../components/ui/EmptyState';
 import FormularioCompra from '../components/FormularioCompra';
 import DetalleCompra from '../components/DetalleCompra';
@@ -9,11 +11,15 @@ import FormularioJornal from '../components/FormularioJornal';
 import ResumenFinanzas from '../components/ResumenFinanzas';
 import FilaJornal from '../components/finanzas/FilaJornal';
 import FilaCompra from '../components/finanzas/FilaCompra';
-import { IconTag, IconUsers, IconWallet, IconPlus, IconSearch, IconChart } from '../components/ui/Icons';
+import DetalleInsumo from '../components/finanzas/DetalleInsumo';
+import { IconTag, IconUsers, IconWallet, IconPlus, IconSearch, IconChart, IconBox } from '../components/ui/Icons';
 
-type Tab = 'resumen' | 'jornales' | 'compras';
+type Tab = 'resumen' | 'jornales' | 'compras' | 'inventario';
+
+const UNIDADES_COMUNES = ['litros', 'kg', 'gramos', 'bultos', 'unidades'];
 
 export default function Finanzas() {
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('resumen');
   const [compras, setCompras] = useState<CompraInsumo[]>([]);
   const [mostrarFormCompra, setMostrarFormCompra] = useState(false);
@@ -26,9 +32,29 @@ export default function Finanzas() {
   const [filtroTextoJornales, setFiltroTextoJornales] = useState('');
   const [fechaDesdeJornales, setFechaDesdeJornales] = useState('');
   const [fechaHastaJornales, setFechaHastaJornales] = useState('');
+  const [insumos, setInsumos] = useState<InsumoInventario[]>([]);
+  const [insumoSeleccionado, setInsumoSeleccionado] = useState<InsumoInventario | null>(null);
+  const [mostrarFormInsumo, setMostrarFormInsumo] = useState(false);
+  const [nombreInsumoNuevo, setNombreInsumoNuevo] = useState('');
+  const [unidadInsumoNuevo, setUnidadInsumoNuevo] = useState('');
+  const [creandoInsumo, setCreandoInsumo] = useState(false);
 
   useEffect(() => escucharCompras(setCompras), []);
   useEffect(() => escucharJornales(setJornales), []);
+  useEffect(() => escucharInsumos(setInsumos), []);
+
+  async function handleCrearInsumo() {
+    if (!nombreInsumoNuevo.trim() || !unidadInsumoNuevo.trim()) return;
+    setCreandoInsumo(true);
+    try {
+      await crearInsumo(nombreInsumoNuevo, unidadInsumoNuevo, user!.uid);
+      setNombreInsumoNuevo('');
+      setUnidadInsumoNuevo('');
+      setMostrarFormInsumo(false);
+    } finally {
+      setCreandoInsumo(false);
+    }
+  }
 
   const textoCompras = filtroTextoCompras.trim().toLowerCase();
   const comprasFiltradas = compras.filter((c) => {
@@ -66,8 +92,12 @@ export default function Finanzas() {
         </h1>
         {tab !== 'resumen' && (
           <button
-            onClick={() => (tab === 'compras' ? setMostrarFormCompra(true) : setMostrarFormJornal(true))}
-            aria-label={tab === 'compras' ? 'Registrar compra' : 'Registrar pago de jornal'}
+            onClick={() => {
+              if (tab === 'compras') setMostrarFormCompra(true);
+              else if (tab === 'jornales') setMostrarFormJornal(true);
+              else setMostrarFormInsumo(true);
+            }}
+            aria-label={tab === 'compras' ? 'Registrar compra' : tab === 'jornales' ? 'Registrar pago de jornal' : 'Nuevo insumo'}
             className="flex h-8 w-8 flex-none items-center justify-center rounded-full"
             style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
           >
@@ -76,7 +106,7 @@ export default function Finanzas() {
         )}
       </div>
       <p className="mb-5 text-sm" style={{ color: 'var(--text-dim)' }}>
-        Resumen, jornales y compras de insumos de toda la finca
+        Resumen, jornales, compras e inventario de insumos de toda la finca
       </p>
 
       <div className="mb-5 flex gap-2">
@@ -115,6 +145,18 @@ export default function Finanzas() {
         >
           <IconTag className="h-4 w-4" />
           Compras de insumos
+        </button>
+        <button
+          onClick={() => setTab('inventario')}
+          className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition"
+          style={
+            tab === 'inventario'
+              ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
+              : { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }
+          }
+        >
+          <IconBox className="h-4 w-4" />
+          Inventario
         </button>
       </div>
 
@@ -306,6 +348,115 @@ export default function Finanzas() {
           </>
         ))}
 
+      {tab === 'inventario' && (
+        <>
+          {mostrarFormInsumo && (
+            <div className="mb-3 rounded-xl border p-3.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+              <p className="mb-2 text-sm font-medium" style={{ color: 'var(--text)' }}>
+                Nuevo insumo
+              </p>
+              <input
+                autoFocus
+                placeholder="Nombre del insumo"
+                value={nombreInsumoNuevo}
+                onChange={(e) => setNombreInsumoNuevo(e.target.value)}
+                className="mb-2 w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
+              />
+              <input
+                list="unidades-comunes-finanzas"
+                placeholder="Unidad (litros, kg, bultos...)"
+                value={unidadInsumoNuevo}
+                onChange={(e) => setUnidadInsumoNuevo(e.target.value)}
+                className="mb-3 w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
+              />
+              <datalist id="unidades-comunes-finanzas">
+                {UNIDADES_COMUNES.map((u) => (
+                  <option key={u} value={u} />
+                ))}
+              </datalist>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMostrarFormInsumo(false)}
+                  className="flex-1 rounded-xl border py-2 text-sm font-medium"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCrearInsumo}
+                  disabled={creandoInsumo || !nombreInsumoNuevo.trim() || !unidadInsumoNuevo.trim()}
+                  className="flex-1 rounded-xl py-2 text-sm font-medium disabled:opacity-60"
+                  style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
+                >
+                  {creandoInsumo ? 'Creando...' : 'Crear insumo'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {insumos.length === 0 ? (
+            <EmptyState
+              icon={<IconBox className="h-6 w-6" />}
+              title="Todavía no hay insumos en el inventario"
+              description="Registrá un insumo para llevar el stock y el costo de cada aplicación."
+              action={
+                <button
+                  onClick={() => setMostrarFormInsumo(true)}
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium"
+                  style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
+                >
+                  Nuevo insumo
+                </button>
+              }
+            />
+          ) : (
+            <>
+              <p className="mb-3 text-sm" style={{ color: 'var(--text-dim)' }}>
+                <b style={{ color: 'var(--text)' }}>{insumos.length}</b> {insumos.length === 1 ? 'insumo' : 'insumos'} ·
+                valor total en stock{' '}
+                <b style={{ color: 'var(--text)' }}>
+                  $ {insumos.reduce((s, i) => s + i.stockActual * i.costoUnitario, 0).toLocaleString('es-CO')}
+                </b>
+              </p>
+              <div className="flex flex-col gap-2">
+                {insumos.map((i) => (
+                  <button
+                    key={i.id}
+                    type="button"
+                    onClick={() => setInsumoSeleccionado(i)}
+                    className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition hover:brightness-95 active:scale-[0.99]"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+                  >
+                    <div
+                      className="flex h-10 w-10 flex-none items-center justify-center rounded-lg"
+                      style={{ backgroundColor: 'var(--bg)', color: i.stockActual < 0 ? '#b4552f' : 'var(--text-dim)' }}
+                    >
+                      <IconBox className="h-4.5 w-4.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-serif font-semibold" style={{ color: 'var(--text)' }}>
+                          {i.nombre}
+                        </p>
+                        <p className="flex-none font-medium" style={{ color: i.stockActual < 0 ? '#b4552f' : 'var(--text)' }}>
+                          {i.stockActual} {i.unidad}
+                        </p>
+                      </div>
+                      <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                        $ {i.costoUnitario.toLocaleString('es-CO')} / {i.unidad.replace(/s$/, '')} · valor en stock $
+                        {(i.stockActual * i.costoUnitario).toLocaleString('es-CO')}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       {mostrarFormCompra && (
         <FormularioCompra onCerrar={() => setMostrarFormCompra(false)} onGuardado={() => {}} />
       )}
@@ -314,6 +465,9 @@ export default function Finanzas() {
       )}
       {mostrarFormJornal && (
         <FormularioJornal onCerrar={() => setMostrarFormJornal(false)} onGuardado={() => {}} />
+      )}
+      {insumoSeleccionado && (
+        <DetalleInsumo insumo={insumoSeleccionado} onCerrar={() => setInsumoSeleccionado(null)} />
       )}
     </div>
   );

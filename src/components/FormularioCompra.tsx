@@ -1,8 +1,11 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { crearCompra } from '../lib/compras';
 import { subirFoto } from '../lib/cloudinary';
+import { escucharInsumos } from '../lib/insumos';
 import { useAuth } from '../lib/AuthContext';
 import { IconCamera } from './ui/Icons';
+import SelectorInsumo from './finanzas/SelectorInsumo';
+import type { InsumoInventario } from '../types/models';
 
 interface Props {
   onCerrar: () => void;
@@ -17,7 +20,9 @@ const OPCIONES_PERSONA = ['Freddy', 'Emerson', 'Otro'];
 
 export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
-  const [producto, setProducto] = useState('');
+  const [insumos, setInsumos] = useState<InsumoInventario[]>([]);
+  const [insumoId, setInsumoId] = useState<string | null>(null);
+  const [cantidad, setCantidad] = useState('');
   const [costo, setCosto] = useState('');
   const [fecha, setFecha] = useState(hoyISO());
   const [proveedor, setProveedor] = useState('');
@@ -30,6 +35,10 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
   const [error, setError] = useState<string | null>(null);
   const inputFotoRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => escucharInsumos(setInsumos), []);
+
+  const insumoSeleccionado = insumos.find((i) => i.id === insumoId) ?? null;
+
   function handleFotoSeleccionada(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     setFoto(file);
@@ -38,13 +47,22 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!insumoSeleccionado) {
+      setError('Elegí qué insumo compraste.');
+      return;
+    }
     if (!personaOpcion || (personaOpcion === 'Otro' && !otroNombre.trim())) {
       setError('Elegí quién hizo la compra.');
       return;
     }
     const costoNum = Number(costo);
+    const cantidadNum = Number(cantidad);
     if (!costoNum || costoNum <= 0) {
       setError('Ingresá un costo válido.');
+      return;
+    }
+    if (!cantidadNum || cantidadNum <= 0) {
+      setError('Ingresá una cantidad válida.');
       return;
     }
     setGuardando(true);
@@ -52,7 +70,9 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
     try {
       const personaQueCompro = personaOpcion === 'Otro' ? otroNombre.trim() : personaOpcion;
       const id = await crearCompra({
-        producto,
+        insumoId: insumoSeleccionado.id,
+        producto: insumoSeleccionado.nombre,
+        cantidad: cantidadNum,
         costo: costoNum,
         fecha,
         proveedor: proveedor || undefined,
@@ -89,19 +109,27 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Producto <span className="text-red-500">*</span>
+          Insumo <span className="text-red-500">*</span>
+        </label>
+        <SelectorInsumo insumos={insumos} valor={insumoId} onChange={setInsumoId} creadoPor={user!.uid} />
+
+        <label className={label} style={{ color: 'var(--text)' }}>
+          Cantidad comprada {insumoSeleccionado ? `(${insumoSeleccionado.unidad})` : ''} <span className="text-red-500">*</span>
         </label>
         <input
           required
-          placeholder="Ej. Fungicida Cupravit"
-          value={producto}
-          onChange={(e) => setProducto(e.target.value)}
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="Ej. 20"
+          value={cantidad}
+          onChange={(e) => setCantidad(e.target.value)}
           className={campo}
           style={campoEstilo}
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Costo <span className="text-red-500">*</span>
+          Costo total pagado <span className="text-red-500">*</span>
         </label>
         <input
           required

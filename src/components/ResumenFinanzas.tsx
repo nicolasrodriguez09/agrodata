@@ -12,6 +12,7 @@ import BarraComposicion from './finanzas/BarraComposicion';
 import RankingBarras from './finanzas/RankingBarras';
 import DetalleGastosPeriodo from './finanzas/DetalleGastosPeriodo';
 import DetalleVentasPeriodo from './finanzas/DetalleVentasPeriodo';
+import DetalleFinancieroLote from './finanzas/DetalleFinancieroLote';
 
 const COLOR_GASTO = '#b4552f';
 const MESES_A_MOSTRAR = 8;
@@ -64,6 +65,7 @@ export default function ResumenFinanzas() {
   const [hastaTiempo, setHastaTiempo] = useState('');
   const [mostrarDetalleGastos, setMostrarDetalleGastos] = useState(false);
   const [mostrarDetalleVentas, setMostrarDetalleVentas] = useState(false);
+  const [loteSeleccionadoId, setLoteSeleccionadoId] = useState<string | null>(null);
 
   useEffect(() => escucharTodasLasVentas(setVentas), []);
   useEffect(() => escucharCompras(setCompras), []);
@@ -293,7 +295,7 @@ export default function ResumenFinanzas() {
 
       {vista === 'lotes' &&
         (rankingLotes.length > 0 ? (
-          <RankingBarras filas={rankingLotes} />
+          <RankingBarras filas={rankingLotes} onFilaClick={setLoteSeleccionadoId} />
         ) : (
           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
             Todavía no hay ventas registradas por lote.
@@ -333,6 +335,18 @@ export default function ResumenFinanzas() {
           onCerrar={() => setMostrarDetalleVentas(false)}
         />
       )}
+      {loteSeleccionadoId &&
+        (() => {
+          const lote = lotes.find((l) => l.id === loteSeleccionadoId);
+          if (!lote) return null;
+          return (
+            <DetalleFinancieroLote
+              lote={lote}
+              nombreFinca={nombreFinca(lote.fincaId)}
+              onCerrar={() => setLoteSeleccionadoId(null)}
+            />
+          );
+        })()}
     </div>
   );
 }

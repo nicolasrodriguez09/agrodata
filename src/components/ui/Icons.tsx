@@ -73,6 +73,15 @@ export function IconWallet(props: IconProps) {
   );
 }
 
+export function IconBox(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 8.5 12 4l9 4.5-9 4.5-9-4.5Z" strokeLinejoin="round" />
+      <path d="M3 8.5V16l9 4.5 9-4.5V8.5M12 13v7.5" />
+    </svg>
+  );
+}
+
 export function IconChart(props: IconProps) {
   return (
     <svg {...base} {...props}>

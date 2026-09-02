@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { IconChevronRight } from '../ui/Icons';
 
 export interface FilaRanking {
   id: string;
@@ -7,7 +8,7 @@ export interface FilaRanking {
   valor: number;
 }
 
-export default function RankingBarras({ filas }: { filas: FilaRanking[] }) {
+export default function RankingBarras({ filas, onFilaClick }: { filas: FilaRanking[]; onFilaClick?: (id: string) => void }) {
   const [montado, setMontado] = useState(false);
   useEffect(() => {
     setMontado(false);
@@ -22,8 +23,14 @@ export default function RankingBarras({ filas }: { filas: FilaRanking[] }) {
       {filas.map((f, i) => {
         const pct = f.valor > 0 ? Math.max((f.valor / max) * 100, 3) : 0;
         const esTop = i === 0 && f.valor > 0;
+        const Contenedor = onFilaClick ? 'button' : 'div';
         return (
-          <div key={f.id} className="mb-3.5 last:mb-0">
+          <Contenedor
+            key={f.id}
+            type={onFilaClick ? 'button' : undefined}
+            onClick={onFilaClick ? () => onFilaClick(f.id) : undefined}
+            className={`mb-3.5 block w-full text-left last:mb-0 ${onFilaClick ? 'transition hover:brightness-95 active:scale-[0.99]' : ''}`}
+          >
             <div className="mb-1 flex items-baseline gap-2">
               <span
                 className="font-display flex-none text-[10px] font-black"
@@ -42,6 +49,7 @@ export default function RankingBarras({ filas }: { filas: FilaRanking[] }) {
               <p className="flex-none text-xs font-medium" style={{ color: 'var(--text)' }}>
                 $ {f.valor.toLocaleString('es-CO')}
               </p>
+              {onFilaClick && <IconChevronRight className="h-3.5 w-3.5 flex-none" style={{ color: 'var(--text-dim)' }} />}
             </div>
             <div className="ml-4.5 h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--nodata)' }}>
               <div
@@ -53,7 +61,7 @@ export default function RankingBarras({ filas }: { filas: FilaRanking[] }) {
                 }}
               />
             </div>
-          </div>
+          </Contenedor>
         );
       })}
     </div>

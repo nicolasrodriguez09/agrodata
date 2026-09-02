@@ -4,7 +4,7 @@ import { escucharFincas } from '../lib/fincas';
 import { escucharLote, borrarLote } from '../lib/lotes';
 import { escucharCiclosDeLote, cerrarCiclo } from '../lib/ciclos';
 import { cargarResumenCiclo, type ResumenCiclo } from '../lib/resumenCiclo';
-import { escucharAplicacionesDeCiclo } from '../lib/aplicaciones';
+import { escucharAplicacionesDeCiclo, formatoCantidadAplicacion } from '../lib/aplicaciones';
 import { escucharCosechasDeCiclo } from '../lib/cosechas';
 import { escucharVentasDeCiclo } from '../lib/ventas';
 import type { Aplicacion, Ciclo, Cosecha, Finca, Lote, Venta } from '../types/models';
@@ -344,12 +344,37 @@ export default function LoteDetalle() {
                   {resumen.cosechas}
                 </p>
               </div>
-              <div className="col-span-2 rounded-xl border p-3 sm:col-span-2" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Gastado en insumos
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  $ {resumen.totalGastado.toLocaleString('es-CO')}
+                </p>
+              </div>
+              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
                   Total vendido
                 </p>
                 <p className="font-medium" style={{ color: 'var(--text)' }}>
                   $ {resumen.totalVendido.toLocaleString('es-CO')}
+                </p>
+              </div>
+              <div
+                className="col-span-2 rounded-xl border p-3 sm:col-span-2"
+                style={{
+                  borderColor: resumen.balance >= 0 ? 'var(--recent)' : '#b4552f',
+                  backgroundColor:
+                    resumen.balance >= 0
+                      ? 'color-mix(in srgb, var(--recent) 12%, transparent)'
+                      : 'color-mix(in srgb, #b4552f 12%, transparent)',
+                }}
+              >
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                  Balance
+                </p>
+                <p className="font-medium" style={{ color: 'var(--text)' }}>
+                  $ {resumen.balance.toLocaleString('es-CO')}
                 </p>
               </div>
             </div>
@@ -508,7 +533,7 @@ export default function LoteDetalle() {
                           </div>
                           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
                             {item.tipo === 'aplicacion'
-                              ? `${item.data.cantidad}${item.data.dosis ? ` · ${item.data.dosis}` : ''} · aplicó ${item.data.responsable}`
+                              ? `${formatoCantidadAplicacion(item.data)}${item.data.dosis ? ` · ${item.data.dosis}` : ''} · aplicó ${item.data.responsable}`
                               : (item.data.calidad ?? 'Sin clasificar')}
                           </p>
                         </div>

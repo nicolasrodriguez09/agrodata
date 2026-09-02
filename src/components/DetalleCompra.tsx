@@ -36,6 +36,14 @@ export default function DetalleCompra({ compra, onCerrar }: Props) {
         )}
 
         <div className="flex flex-col gap-3 text-sm">
+          {compra.cantidad != null && (
+            <div className="flex items-center justify-between">
+              <span style={{ color: 'var(--text-dim)' }}>Cantidad comprada</span>
+              <span className="font-medium" style={{ color: 'var(--text)' }}>
+                {compra.cantidad}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span style={{ color: 'var(--text-dim)' }}>Costo</span>
             <span className="font-medium" style={{ color: 'var(--text)' }}>

@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { crearAplicacion, actualizarAplicacion } from '../lib/aplicaciones';
+import { escucharInsumos } from '../lib/insumos';
 import { useAuth } from '../lib/AuthContext';
-import type { Aplicacion } from '../types/models';
+import SelectorInsumo from './finanzas/SelectorInsumo';
+import type { Aplicacion, InsumoInventario } from '../types/models';
 
 interface Props {
   loteId: string;
@@ -20,9 +22,12 @@ const OPCIONES_RESPONSABLE = ['Freddy', 'Emerson', 'Otro'];
 export default function FormularioAplicacion({ loteId, cicloId, aplicacionExistente, onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
   const editando = !!aplicacionExistente;
-  const [producto, setProducto] = useState(aplicacionExistente?.producto ?? '');
+  const [insumos, setInsumos] = useState<InsumoInventario[]>([]);
+  const [insumoId, setInsumoId] = useState<string | null>(aplicacionExistente?.insumoId ?? null);
   const [dosis, setDosis] = useState(aplicacionExistente?.dosis ?? '');
-  const [cantidad, setCantidad] = useState(aplicacionExistente?.cantidad ?? '');
+  const [cantidad, setCantidad] = useState(
+    typeof aplicacionExistente?.cantidad === 'number' ? String(aplicacionExistente.cantidad) : '',
+  );
   const [fecha, setFecha] = useState(aplicacionExistente?.fecha ?? hoyISO());
   const responsableInicial = aplicacionExistente?.responsable ?? null;
   const esOpcionConocida = responsableInicial && OPCIONES_RESPONSABLE.slice(0, 2).includes(responsableInicial);
@@ -33,20 +38,44 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => escucharInsumos(setInsumos), []);
+
+  const insumoSeleccionado = insumos.find((i) => i.id === insumoId) ?? null;
+  const cantidadNum = Number(cantidad) || 0;
+  const dejaStockNegativo = !!insumoSeleccionado && cantidadNum > insumoSeleccionado.stockActual;
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!insumoSeleccionado) {
+      setError('Elegí qué insumo aplicaste.');
+      return;
+    }
     if (!responsableOpcion || (responsableOpcion === 'Otro' && !otroNombre.trim())) {
       setError('Elegí quién la aplicó.');
+      return;
+    }
+    if (!cantidadNum || cantidadNum <= 0) {
+      setError('Ingresá una cantidad válida.');
       return;
     }
     setGuardando(true);
     setError(null);
     try {
       const responsable = responsableOpcion === 'Otro' ? otroNombre.trim() : responsableOpcion;
+      const datos = {
+        insumoId: insumoSeleccionado.id,
+        producto: insumoSeleccionado.nombre,
+        dosis,
+        cantidad: cantidadNum,
+        unidad: insumoSeleccionado.unidad,
+        costoUnitario: insumoSeleccionado.costoUnitario,
+        fecha,
+        responsable,
+      };
       if (editando) {
-        await actualizarAplicacion(aplicacionExistente!.id, { producto, dosis, cantidad, fecha, responsable });
+        await actualizarAplicacion(aplicacionExistente!, datos);
       } else {
-        await crearAplicacion({ loteId, cicloId, producto, dosis, cantidad, fecha, responsable, creadoPor: user!.uid });
+        await crearAplicacion({ loteId, cicloId, ...datos, creadoPor: user!.uid });
       }
       onGuardado();
       onCerrar();
@@ -73,16 +102,14 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Producto <span className="text-red-500">*</span>
+          Insumo <span className="text-red-500">*</span>
         </label>
-        <input
-          required
-          placeholder="Ej. Fungicida XYZ"
-          value={producto}
-          onChange={(e) => setProducto(e.target.value)}
-          className={campo}
-          style={campoEstilo}
-        />
+        <SelectorInsumo insumos={insumos} valor={insumoId} onChange={setInsumoId} creadoPor={user!.uid} />
+        {insumoSeleccionado && (
+          <p className="-mt-2.5 mb-4 text-xs" style={{ color: 'var(--text-dim)' }}>
+            Stock disponible: {insumoSeleccionado.stockActual} {insumoSeleccionado.unidad}
+          </p>
+        )}
 
         <label className={label} style={{ color: 'var(--text)' }}>
           Dosis (opcional)
@@ -96,16 +123,24 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Cantidad aplicada <span className="text-red-500">*</span>
+          Cantidad aplicada {insumoSeleccionado ? `(${insumoSeleccionado.unidad})` : ''} <span className="text-red-500">*</span>
         </label>
         <input
           required
-          placeholder="Ej. 20 litros"
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="Ej. 20"
           value={cantidad}
           onChange={(e) => setCantidad(e.target.value)}
           className={campo}
           style={campoEstilo}
         />
+        {dejaStockNegativo && (
+          <p className="-mt-2.5 mb-4 text-xs" style={{ color: '#b4552f' }}>
+            Vas a dejar el stock en negativo — puede que falte registrar una compra.
+          </p>
+        )}
 
         <label className={label} style={{ color: 'var(--text)' }}>
           Fecha <span className="text-red-500">*</span>

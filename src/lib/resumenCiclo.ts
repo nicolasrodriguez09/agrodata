@@ -4,7 +4,9 @@ import { db } from './firebase';
 export interface ResumenCiclo {
   aplicaciones: number;
   cosechas: number;
+  totalGastado: number;
   totalVendido: number;
+  balance: number;
 }
 
 async function contar(coleccion: string, cicloId: string) {
@@ -13,9 +15,10 @@ async function contar(coleccion: string, cicloId: string) {
 }
 
 /**
- * Trae los totales reales de un ciclo. No incluye compras de insumos ni
- * jornales: ninguno de los dos está atado a un lote/ciclo (ver CompraInsumo
- * y Jornal en types/models.ts), así que viven aparte en Finanzas.
+ * Trae los totales reales de un ciclo. "Gastado" sale de costoEstimado en
+ * cada aplicación (cantidad × costo del insumo en ese momento, ver
+ * lib/insumos.ts) — los jornales siguen sin estar atados a un lote/ciclo,
+ * así que no entran acá, viven aparte en Finanzas.
  */
 export async function cargarResumenCiclo(cicloId: string): Promise<ResumenCiclo> {
   const [aplicaciones, cosechas, ventas] = await Promise.all([
@@ -24,11 +27,14 @@ export async function cargarResumenCiclo(cicloId: string): Promise<ResumenCiclo>
     contar('ventas', cicloId),
   ]);
 
+  const totalGastado = aplicaciones.reduce((s, d) => s + (Number(d.data().costoEstimado) || 0), 0);
   const totalVendido = ventas.reduce((s, d) => s + (Number(d.data().precio) || 0), 0);
 
   return {
     aplicaciones: aplicaciones.length,
     cosechas: cosechas.length,
+    totalGastado,
     totalVendido,
+    balance: totalVendido - totalGastado,
   };
 }

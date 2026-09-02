@@ -37,6 +37,13 @@ entre un sistema simple que resuelve el problema real (saber cuánto gastaron y 
 complejo (control de bodega) que hoy no hace falta. Se puede agregar más adelante si surge la
 necesidad.
 
+> **Revisado:** esta decisión se revirtió más adelante en el proyecto (después de desligar
+> `CompraInsumo` de lote/ciclo en la Épica 5, lo cual dejó sin resolver el "gastado en insumos por
+> lote" que pedía HU-7.2). Ahora sí existe un inventario de insumos (catálogo con stock y costo
+> unitario): cada compra carga stock, cada aplicación lo descuenta y calcula un costo estimado
+> ligado a su lote/ciclo. El costeo es por último precio de compra (no promedio ponderado), para que
+> todo el flujo siga funcionando sin conexión en el campo. Ver `src/lib/insumos.ts`.
+
 ---
 
 ## Estructura general de la app (navegación)
