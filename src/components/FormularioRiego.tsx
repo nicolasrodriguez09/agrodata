@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { crearRiego, actualizarRiego } from '../lib/riegos';
+import { crearRiego, actualizarRiego, borrarRiego } from '../lib/riegos';
 import { useAuth } from '../lib/AuthContext';
+import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
 import type { Riego } from '../types/models';
+import { hoyISO } from '../lib/fechas';
 
 interface Props {
   loteId: string;
@@ -9,10 +11,6 @@ interface Props {
   riegoExistente?: Riego | null;
   onCerrar: () => void;
   onGuardado: () => void;
-}
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 const OPCIONES_METODO = ['Aspersión', 'Goteo', 'Manual'];
@@ -36,7 +34,7 @@ export default function FormularioRiego({ loteId, cicloId, riegoExistente, onCer
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!responsableOpcion || (responsableOpcion === 'Otro' && !otroNombre.trim())) {
-      setError('Elegí quién regó.');
+      setError('Elige quién regó.');
       return;
     }
     setGuardando(true);
@@ -52,7 +50,7 @@ export default function FormularioRiego({ loteId, cicloId, riegoExistente, onCer
       onGuardado();
       onCerrar();
     } catch {
-      setError('No se pudo guardar. Probá de nuevo.');
+      setError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -74,7 +72,7 @@ export default function FormularioRiego({ loteId, cicloId, riegoExistente, onCer
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Fecha <span className="text-red-500">*</span>
+          Fecha <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           type="date"
@@ -118,7 +116,7 @@ export default function FormularioRiego({ loteId, cicloId, riegoExistente, onCer
         </div>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Quién regó <span className="text-red-500">*</span>
+          Quién regó <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <div className="mb-2 flex gap-2">
           {OPCIONES_RESPONSABLE.map((op) => (
@@ -150,7 +148,7 @@ export default function FormularioRiego({ loteId, cicloId, riegoExistente, onCer
         )}
         {responsableOpcion !== 'Otro' && <div className="mb-4" />}
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>{error}</p>}
 
         <div className="mt-1 flex gap-2">
           <button
@@ -170,6 +168,17 @@ export default function FormularioRiego({ loteId, cicloId, riegoExistente, onCer
             {guardando ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
+
+        {editando && (
+          <BotonBorrarRegistro
+            etiqueta="este riego"
+            onBorrar={() => borrarRiego(riegoExistente!.id)}
+            onBorrado={() => {
+              onGuardado();
+              onCerrar();
+            }}
+          />
+        )}
       </form>
     </div>
   );

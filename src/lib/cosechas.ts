@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Cosecha } from '../types/models';
 
@@ -47,4 +47,8 @@ export async function actualizarCosecha(
     cantidad: data.cantidad.trim(),
     calidad: data.calidad || null,
   });
+}
+
+export async function borrarCosecha(id: string) {
+  await deleteDoc(doc(db, 'cosechas', id));
 }

@@ -46,7 +46,7 @@ export default function FormularioLote({ fincas, loteExistente, onCerrar }: Prop
       }
       onCerrar();
     } catch {
-      setError('No se pudo guardar. Probá de nuevo.');
+      setError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -68,7 +68,7 @@ export default function FormularioLote({ fincas, loteExistente, onCerrar }: Prop
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Nombre <span className="text-red-500">*</span>
+          Nombre <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input required value={nombre} onChange={(e) => setNombre(e.target.value)} className={campo} style={campoEstilo} />
 
@@ -85,7 +85,7 @@ export default function FormularioLote({ fincas, loteExistente, onCerrar }: Prop
         </select>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Cultivo actual <span className="text-red-500">*</span>
+          Cultivo actual <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input required value={cultivo} onChange={(e) => setCultivo(e.target.value)} className={campo} style={campoEstilo} />
 
@@ -119,7 +119,7 @@ export default function FormularioLote({ fincas, loteExistente, onCerrar }: Prop
           </div>
         </div>
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>{error}</p>}
 
         <div className="mt-1 flex gap-2">
           <button

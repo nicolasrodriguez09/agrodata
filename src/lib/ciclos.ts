@@ -1,6 +1,7 @@
 import { collection, onSnapshot, addDoc, updateDoc, doc, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Ciclo } from '../types/models';
+import { hoyISO } from './fechas';
 
 const coleccion = collection(db, 'ciclos');
 
@@ -39,7 +40,7 @@ export async function abrirCiclo(loteId: string, data: { nombre: string; fechaIn
 export async function cerrarCiclo(loteId: string, cicloId: string) {
   await updateDoc(doc(db, 'ciclos', cicloId), {
     estado: 'cerrado' as const,
-    fechaCierre: new Date().toISOString().slice(0, 10),
+    fechaCierre: hoyISO(),
   });
   await updateDoc(doc(db, 'lotes', loteId), { cicloActivoId: null });
 }

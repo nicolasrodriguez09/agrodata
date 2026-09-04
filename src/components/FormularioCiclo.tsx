@@ -1,13 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { abrirCiclo } from '../lib/ciclos';
+import { hoyISO } from '../lib/fechas';
 
 interface Props {
   loteId: string;
   onCerrar: () => void;
-}
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 export default function FormularioCiclo({ loteId, onCerrar }: Props) {
@@ -24,7 +21,7 @@ export default function FormularioCiclo({ loteId, onCerrar }: Props) {
       await abrirCiclo(loteId, { nombre, fechaInicio });
       onCerrar();
     } catch {
-      setError('No se pudo abrir el ciclo. Probá de nuevo.');
+      setError('No se pudo abrir el ciclo. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -50,12 +47,12 @@ export default function FormularioCiclo({ loteId, onCerrar }: Props) {
         </p>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Nombre o identificador <span className="text-red-500">*</span>
+          Nombre o identificador <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input required value={nombre} onChange={(e) => setNombre(e.target.value)} className={campo} style={campoEstilo} />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Fecha de inicio <span className="text-red-500">*</span>
+          Fecha de inicio <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           type="date"
@@ -66,7 +63,7 @@ export default function FormularioCiclo({ loteId, onCerrar }: Props) {
           style={campoEstilo}
         />
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>{error}</p>}
 
         <div className="mt-1 flex gap-2">
           <button

@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { registrarSalida, revertirSalida } from './insumos';
 import type { Aplicacion } from '../types/models';
@@ -120,4 +120,20 @@ export async function actualizarAplicacion(
     fecha: data.fecha,
     creadoPor: aplicacionExistente.creadoPor,
   });
+}
+
+/** Borra la aplicación y le devuelve al inventario el insumo que había descontado. */
+export async function borrarAplicacion(aplicacion: Aplicacion) {
+  const cantidad = typeof aplicacion.cantidad === 'number' ? aplicacion.cantidad : 0;
+  if (aplicacion.insumoId && cantidad > 0) {
+    await revertirSalida({
+      insumoId: aplicacion.insumoId,
+      cantidad,
+      costoUnitario: cantidad > 0 ? (aplicacion.costoEstimado ?? 0) / cantidad : 0,
+      aplicacionId: aplicacion.id,
+      fecha: aplicacion.fecha,
+      creadoPor: aplicacion.creadoPor,
+    });
+  }
+  await deleteDoc(doc(db, 'aplicaciones', aplicacion.id));
 }

@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc, increment, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, increment, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { InsumoInventario, MovimientoInventario } from '../types/models';
 
@@ -113,5 +113,67 @@ export async function revertirSalida(data: DatosAjuste) {
     origen: 'ajuste' as const,
     origenId: data.aplicacionId,
     creadoPor: data.creadoPor,
+  });
+}
+
+/**
+ * Ajusta el stock de un insumo en `delta` (positivo suma, negativo resta) y deja el movimiento
+ * de 'ajuste' correspondiente, para que el historial del insumo siga cuadrando con su stock.
+ * Se usa al editar o borrar una compra.
+ */
+export async function ajustarStock(data: {
+  insumoId: string;
+  delta: number;
+  costoUnitario: number;
+  origenId: string;
+  fecha: string;
+  creadoPor: string;
+}) {
+  if (data.delta === 0) return;
+  await updateDoc(doc(db, 'insumos', data.insumoId), {
+    stockActual: increment(data.delta),
+  });
+  await addDoc(collection(db, 'movimientos'), {
+    insumoId: data.insumoId,
+    tipo: data.delta > 0 ? ('entrada' as const) : ('salida' as const),
+    cantidad: Math.abs(data.delta),
+    costoUnitario: data.costoUnitario,
+    fecha: data.fecha,
+    origen: 'ajuste' as const,
+    origenId: data.origenId,
+    creadoPor: data.creadoPor,
+  });
+}
+
+/**
+ * Deja el costoUnitario del insumo en el de su compra más reciente (política de "último precio",
+ * ver types/models.ts). Se llama después de editar o borrar una compra, porque esa compra pudo
+ * haber sido justamente la que fijó el precio vigente.
+ */
+export async function recalcularCostoUnitario(insumoId: string) {
+  const snap = await getDocs(query(collection(db, 'compras'), where('insumoId', '==', insumoId)));
+  const compras = snap.docs
+    .map((d) => d.data() as { fecha: string; costo: number; cantidad?: number })
+    .filter((c) => (c.cantidad ?? 0) > 0)
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const masReciente = compras[0];
+  await updateDoc(doc(db, 'insumos', insumoId), {
+    costoUnitario: masReciente ? masReciente.costo / (masReciente.cantidad ?? 1) : 0,
+  });
+}
+
+/** Solo deja borrar un insumo si no tiene movimientos, para no dejar historial huérfano. */
+export async function borrarInsumo(id: string) {
+  const movimientos = await getDocs(query(collection(db, 'movimientos'), where('insumoId', '==', id)));
+  if (!movimientos.empty) {
+    throw new Error('NO_SE_PUEDE_BORRAR_TIENE_MOVIMIENTOS');
+  }
+  await deleteDoc(doc(db, 'insumos', id));
+}
+
+export async function actualizarInsumo(id: string, nombre: string, unidad: string) {
+  await updateDoc(doc(db, 'insumos', id), {
+    nombre: nombre.trim(),
+    unidad: unidad.trim(),
   });
 }

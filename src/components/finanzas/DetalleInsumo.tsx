@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { escucharMovimientosDeInsumo } from '../../lib/insumos';
+import { escucharMovimientosDeInsumo, actualizarInsumo, borrarInsumo } from '../../lib/insumos';
 import { escucharLotes } from '../../lib/lotes';
 import type { InsumoInventario, Lote, MovimientoInventario } from '../../types/models';
-import { IconArrowLeft, IconBox } from '../ui/Icons';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import InfoDialog from '../ui/InfoDialog';
+import { IconArrowLeft, IconBox, IconPencil, IconTrash } from '../ui/Icons';
+import { formatoFecha } from '../../lib/fechas';
 
 interface Props {
   insumo: InsumoInventario;
@@ -12,6 +15,33 @@ interface Props {
 export default function DetalleInsumo({ insumo, onCerrar }: Props) {
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
   const [lotes, setLotes] = useState<Lote[]>([]);
+  const [editando, setEditando] = useState(false);
+  const [nombre, setNombre] = useState(insumo.nombre);
+  const [unidad, setUnidad] = useState(insumo.unidad);
+  const [guardando, setGuardando] = useState(false);
+  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
+  const [avisoNoSeBorra, setAvisoNoSeBorra] = useState(false);
+
+  async function handleGuardar() {
+    if (!nombre.trim() || !unidad.trim()) return;
+    setGuardando(true);
+    try {
+      await actualizarInsumo(insumo.id, nombre, unidad);
+      setEditando(false);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function handleBorrar() {
+    setConfirmarBorrado(false);
+    try {
+      await borrarInsumo(insumo.id);
+      onCerrar();
+    } catch {
+      setAvisoNoSeBorra(true);
+    }
+  }
 
   useEffect(() => escucharMovimientosDeInsumo(insumo.id, setMovimientos), [insumo.id]);
   useEffect(() => escucharLotes(setLotes), []);
@@ -26,12 +56,77 @@ export default function DetalleInsumo({ insumo, onCerrar }: Props) {
           Volver al inventario
         </button>
 
-        <h1 className="font-serif text-2xl font-semibold" style={{ color: 'var(--text)' }}>
-          {insumo.nombre}
-        </h1>
-        <p className="mb-4 text-sm" style={{ color: 'var(--text-dim)' }}>
-          Costo por {insumo.unidad.replace(/s$/, '')}: $ {insumo.costoUnitario.toLocaleString('es-CO')}
-        </p>
+        {editando ? (
+          <div className="mb-4 rounded-xl border p-3.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+            <p className="mb-2 text-sm font-medium" style={{ color: 'var(--text)' }}>
+              Editar insumo
+            </p>
+            <input
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Nombre del insumo"
+              className="mb-2 w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
+            />
+            <input
+              value={unidad}
+              onChange={(e) => setUnidad(e.target.value)}
+              placeholder="Unidad"
+              className="mb-3 w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setNombre(insumo.nombre);
+                  setUnidad(insumo.unidad);
+                  setEditando(false);
+                }}
+                className="flex-1 rounded-xl border py-2 text-sm font-medium"
+                style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleGuardar}
+                disabled={guardando || !nombre.trim() || !unidad.trim()}
+                className="flex-1 rounded-xl py-2 text-sm font-medium disabled:opacity-60"
+                style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
+              >
+                {guardando ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="font-serif text-2xl font-semibold" style={{ color: 'var(--text)' }}>
+                {insumo.nombre}
+              </h1>
+              <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                Costo por {insumo.unidad.replace(/s$/, '')}: $ {insumo.costoUnitario.toLocaleString('es-CO')}
+              </p>
+            </div>
+            <div className="flex flex-none gap-1">
+              <button
+                onClick={() => setEditando(true)}
+                aria-label="Editar insumo"
+                className="flex h-9 w-9 items-center justify-center rounded-full"
+                style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
+              >
+                <IconPencil className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setConfirmarBorrado(true)}
+                aria-label="Borrar insumo"
+                className="flex h-9 w-9 items-center justify-center rounded-full"
+                style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: '#b4552f' }}
+              >
+                <IconTrash className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mb-4 grid grid-cols-2 gap-2">
           <div className="rounded-xl border p-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
@@ -88,14 +183,14 @@ export default function DetalleInsumo({ insumo, onCerrar }: Props) {
                         {m.cantidad} {insumo.unidad}
                       </p>
                       <p className="flex-none text-xs" style={{ color: 'var(--text-dim)' }}>
-                        {m.fecha}
+                        {formatoFecha(m.fecha)}
                       </p>
                     </div>
                     <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
                       {m.origen === 'compra'
                         ? 'Compra'
                         : m.origen === 'ajuste'
-                          ? 'Ajuste por edición'
+                          ? 'Ajuste por corrección'
                           : lote
                             ? `Aplicado en ${lote.nombre}`
                             : 'Aplicación'}{' '}
@@ -108,6 +203,24 @@ export default function DetalleInsumo({ insumo, onCerrar }: Props) {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmarBorrado}
+        title={`¿Borrar el insumo "${insumo.nombre}"?`}
+        description="Solo se puede borrar si todavía no tiene compras ni aplicaciones registradas."
+        confirmLabel="Borrar"
+        danger
+        onConfirm={handleBorrar}
+        onCancel={() => setConfirmarBorrado(false)}
+      />
+
+      <InfoDialog
+        open={avisoNoSeBorra}
+        title="Este insumo ya tiene movimientos"
+        description="No se puede borrar porque tiene compras o aplicaciones asociadas. Si ya no lo usas, déjalo con stock en cero."
+        tono="error"
+        onClose={() => setAvisoNoSeBorra(false)}
+      />
     </div>
   );
 }

@@ -1,51 +1,48 @@
 import { useState, type FormEvent } from 'react';
-import { crearVenta } from '../lib/ventas';
+import { crearVenta, actualizarVenta, borrarVenta } from '../lib/ventas';
 import { useAuth } from '../lib/AuthContext';
+import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
+import type { Venta } from '../types/models';
+import { hoyISO } from '../lib/fechas';
 
 interface Props {
   loteId: string;
   cicloId: string;
+  ventaExistente?: Venta | null;
   onCerrar: () => void;
   onGuardado: () => void;
 }
 
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export default function FormularioVenta({ loteId, cicloId, onCerrar, onGuardado }: Props) {
+export default function FormularioVenta({ loteId, cicloId, ventaExistente, onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
-  const [fecha, setFecha] = useState(hoyISO());
-  const [cantidad, setCantidad] = useState('');
-  const [precio, setPrecio] = useState('');
-  const [comprador, setComprador] = useState('');
-  const [cobrado, setCobrado] = useState<boolean | null>(null);
+  const editando = !!ventaExistente;
+  const [fecha, setFecha] = useState(ventaExistente?.fecha ?? hoyISO());
+  const [cantidad, setCantidad] = useState(ventaExistente?.cantidad ?? '');
+  const [precio, setPrecio] = useState(ventaExistente ? String(ventaExistente.precio) : '');
+  const [comprador, setComprador] = useState(ventaExistente?.comprador ?? '');
+  const [cobrado, setCobrado] = useState<boolean | null>(ventaExistente?.cobrado ?? null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (cobrado === null) {
-      setError('Decí si ya se cobró o no.');
+      setError('Indica si ya se cobró o no.');
       return;
     }
     setGuardando(true);
     setError(null);
     try {
-      await crearVenta({
-        loteId,
-        cicloId,
-        fecha,
-        cantidad,
-        precio: Number(precio),
-        comprador,
-        cobrado,
-        creadoPor: user!.uid,
-      });
+      const datos = { fecha, cantidad, precio: Number(precio), comprador, cobrado };
+      if (editando) {
+        await actualizarVenta(ventaExistente!.id, datos);
+      } else {
+        await crearVenta({ loteId, cicloId, ...datos, creadoPor: user!.uid });
+      }
       onGuardado();
       onCerrar();
     } catch {
-      setError('No se pudo guardar. Probá de nuevo.');
+      setError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -63,11 +60,11 @@ export default function FormularioVenta({ loteId, cicloId, onCerrar, onGuardado 
         style={{ backgroundColor: 'var(--surface)' }}
       >
         <h2 className="font-serif mb-4 text-lg font-semibold" style={{ color: 'var(--text)' }}>
-          Registrar venta
+          {editando ? 'Editar venta' : 'Registrar venta'}
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Fecha <span className="text-red-500">*</span>
+          Fecha <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           type="date"
@@ -79,7 +76,7 @@ export default function FormularioVenta({ loteId, cicloId, onCerrar, onGuardado 
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Cantidad vendida <span className="text-red-500">*</span>
+          Cantidad vendida <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           required
@@ -91,7 +88,7 @@ export default function FormularioVenta({ loteId, cicloId, onCerrar, onGuardado 
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Precio total ($) <span className="text-red-500">*</span>
+          Precio total ($) <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           type="number"
@@ -117,7 +114,7 @@ export default function FormularioVenta({ loteId, cicloId, onCerrar, onGuardado 
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          ¿Ya se cobró? <span className="text-red-500">*</span>
+          ¿Ya se cobró? <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <div className="mb-4 flex gap-2">
           {[
@@ -140,7 +137,7 @@ export default function FormularioVenta({ loteId, cicloId, onCerrar, onGuardado 
           ))}
         </div>
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>{error}</p>}
 
         <div className="mt-1 flex gap-2">
           <button
@@ -160,6 +157,17 @@ export default function FormularioVenta({ loteId, cicloId, onCerrar, onGuardado 
             {guardando ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
+
+        {editando && (
+          <BotonBorrarRegistro
+            etiqueta="esta venta"
+            onBorrar={() => borrarVenta(ventaExistente!.id)}
+            onBorrado={() => {
+              onGuardado();
+              onCerrar();
+            }}
+          />
+        )}
       </form>
     </div>
   );

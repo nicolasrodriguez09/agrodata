@@ -1,33 +1,37 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { crearCompra } from '../lib/compras';
+import { crearCompra, actualizarCompra, borrarCompra } from '../lib/compras';
 import { subirFoto } from '../lib/cloudinary';
 import { escucharInsumos } from '../lib/insumos';
 import { useAuth } from '../lib/AuthContext';
 import { IconCamera } from './ui/Icons';
+import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
 import SelectorInsumo from './finanzas/SelectorInsumo';
-import type { InsumoInventario } from '../types/models';
+import type { CompraInsumo, InsumoInventario } from '../types/models';
+import { hoyISO } from '../lib/fechas';
 
 interface Props {
+  compraExistente?: CompraInsumo | null;
   onCerrar: () => void;
   onGuardado: () => void;
 }
 
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 const OPCIONES_PERSONA = ['Freddy', 'Emerson', 'Otro'];
 
-export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
+export default function FormularioCompra({ compraExistente, onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
+  const editando = !!compraExistente;
   const [insumos, setInsumos] = useState<InsumoInventario[]>([]);
-  const [insumoId, setInsumoId] = useState<string | null>(null);
-  const [cantidad, setCantidad] = useState('');
-  const [costo, setCosto] = useState('');
-  const [fecha, setFecha] = useState(hoyISO());
-  const [proveedor, setProveedor] = useState('');
-  const [personaOpcion, setPersonaOpcion] = useState<string | null>(null);
-  const [otroNombre, setOtroNombre] = useState('');
+  const [insumoId, setInsumoId] = useState<string | null>(compraExistente?.insumoId ?? null);
+  const [cantidad, setCantidad] = useState(compraExistente?.cantidad != null ? String(compraExistente.cantidad) : '');
+  const [costo, setCosto] = useState(compraExistente ? String(compraExistente.costo) : '');
+  const [fecha, setFecha] = useState(compraExistente?.fecha ?? hoyISO());
+  const [proveedor, setProveedor] = useState(compraExistente?.proveedor ?? '');
+  const personaInicial = compraExistente?.personaQueCompro ?? null;
+  const esPersonaConocida = personaInicial && OPCIONES_PERSONA.slice(0, 2).includes(personaInicial);
+  const [personaOpcion, setPersonaOpcion] = useState<string | null>(
+    personaInicial ? (esPersonaConocida ? personaInicial : 'Otro') : null,
+  );
+  const [otroNombre, setOtroNombre] = useState(personaInicial && !esPersonaConocida ? personaInicial : '');
   const [foto, setFoto] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -48,37 +52,38 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!insumoSeleccionado) {
-      setError('Elegí qué insumo compraste.');
+      setError('Elige qué insumo compraste.');
       return;
     }
     if (!personaOpcion || (personaOpcion === 'Otro' && !otroNombre.trim())) {
-      setError('Elegí quién hizo la compra.');
+      setError('Elige quién hizo la compra.');
       return;
     }
     const costoNum = Number(costo);
     const cantidadNum = Number(cantidad);
     if (!costoNum || costoNum <= 0) {
-      setError('Ingresá un costo válido.');
+      setError('Ingresa un costo válido.');
       return;
     }
     if (!cantidadNum || cantidadNum <= 0) {
-      setError('Ingresá una cantidad válida.');
+      setError('Ingresa una cantidad válida.');
       return;
     }
     setGuardando(true);
     setError(null);
     try {
       const personaQueCompro = personaOpcion === 'Otro' ? otroNombre.trim() : personaOpcion;
-      const id = await crearCompra({
-        insumoId: insumoSeleccionado.id,
+      const datos = {
         producto: insumoSeleccionado.nombre,
         cantidad: cantidadNum,
         costo: costoNum,
         fecha,
         proveedor: proveedor || undefined,
         personaQueCompro,
-        creadoPor: user!.uid,
-      });
+      };
+      const id = editando
+        ? (await actualizarCompra(compraExistente!, datos), compraExistente!.id)
+        : await crearCompra({ insumoId: insumoSeleccionado.id, ...datos, creadoPor: user!.uid });
       if (foto) {
         setSubiendoFoto(true);
         await subirFoto(foto, { coleccion: 'compras', docId: id, campo: 'fotoFacturaUrl' });
@@ -86,7 +91,7 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
       onGuardado();
       onCerrar();
     } catch {
-      setError('No se pudo guardar. Probá de nuevo.');
+      setError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
       setSubiendoFoto(false);
@@ -105,16 +110,28 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
         style={{ backgroundColor: 'var(--surface)' }}
       >
         <h2 className="font-serif mb-4 text-lg font-semibold" style={{ color: 'var(--text)' }}>
-          Compra de insumo
+          {editando ? 'Editar compra' : 'Compra de insumo'}
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Insumo <span className="text-red-500">*</span>
+          Insumo <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
-        <SelectorInsumo insumos={insumos} valor={insumoId} onChange={setInsumoId} creadoPor={user!.uid} />
+        {editando ? (
+          <>
+            <p className="mb-1 rounded-xl border px-4 py-3 text-base" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
+              {insumoSeleccionado?.nombre ?? compraExistente?.producto}
+            </p>
+            <p className="mb-4 text-xs" style={{ color: 'var(--text-dim)' }}>
+              El insumo no se puede cambiar. Si te equivocaste de insumo, borra esta compra y
+              regístrala de nuevo.
+            </p>
+          </>
+        ) : (
+          <SelectorInsumo insumos={insumos} valor={insumoId} onChange={setInsumoId} creadoPor={user!.uid} />
+        )}
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Cantidad comprada {insumoSeleccionado ? `(${insumoSeleccionado.unidad})` : ''} <span className="text-red-500">*</span>
+          Cantidad comprada {insumoSeleccionado ? `(${insumoSeleccionado.unidad})` : ''} <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           required
@@ -129,7 +146,7 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Costo total pagado <span className="text-red-500">*</span>
+          Costo total pagado <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           required
@@ -144,7 +161,7 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Fecha <span className="text-red-500">*</span>
+          Fecha <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           type="date"
@@ -167,7 +184,7 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Quién compró <span className="text-red-500">*</span>
+          Quién compró <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <div className="mb-2 flex gap-2">
           {OPCIONES_PERSONA.map((op) => (
@@ -237,7 +254,7 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
           </button>
         )}
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>{error}</p>}
 
         <div className="mt-1 flex gap-2">
           <button
@@ -257,6 +274,18 @@ export default function FormularioCompra({ onCerrar, onGuardado }: Props) {
             {subiendoFoto ? 'Subiendo foto...' : guardando ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
+
+        {editando && (
+          <BotonBorrarRegistro
+            etiqueta="esta compra"
+            descripcion="Se le va a descontar al inventario el stock que esta compra había cargado."
+            onBorrar={() => borrarCompra(compraExistente!)}
+            onBorrado={() => {
+              onGuardado();
+              onCerrar();
+            }}
+          />
+        )}
       </form>
     </div>
   );

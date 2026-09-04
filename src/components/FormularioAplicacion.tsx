@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { crearAplicacion, actualizarAplicacion } from '../lib/aplicaciones';
+import { crearAplicacion, actualizarAplicacion, borrarAplicacion } from '../lib/aplicaciones';
 import { escucharInsumos } from '../lib/insumos';
 import { useAuth } from '../lib/AuthContext';
+import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
 import SelectorInsumo from './finanzas/SelectorInsumo';
 import type { Aplicacion, InsumoInventario } from '../types/models';
+import { hoyISO } from '../lib/fechas';
 
 interface Props {
   loteId: string;
@@ -11,10 +13,6 @@ interface Props {
   aplicacionExistente?: Aplicacion | null;
   onCerrar: () => void;
   onGuardado: () => void;
-}
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 const OPCIONES_RESPONSABLE = ['Freddy', 'Emerson', 'Otro'];
@@ -47,15 +45,15 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!insumoSeleccionado) {
-      setError('Elegí qué insumo aplicaste.');
+      setError('Elige qué insumo aplicaste.');
       return;
     }
     if (!responsableOpcion || (responsableOpcion === 'Otro' && !otroNombre.trim())) {
-      setError('Elegí quién la aplicó.');
+      setError('Elige quién la aplicó.');
       return;
     }
     if (!cantidadNum || cantidadNum <= 0) {
-      setError('Ingresá una cantidad válida.');
+      setError('Ingresa una cantidad válida.');
       return;
     }
     setGuardando(true);
@@ -80,7 +78,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
       onGuardado();
       onCerrar();
     } catch {
-      setError('No se pudo guardar. Probá de nuevo.');
+      setError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -102,7 +100,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Insumo <span className="text-red-500">*</span>
+          Insumo <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <SelectorInsumo insumos={insumos} valor={insumoId} onChange={setInsumoId} creadoPor={user!.uid} />
         {insumoSeleccionado && (
@@ -123,7 +121,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Cantidad aplicada {insumoSeleccionado ? `(${insumoSeleccionado.unidad})` : ''} <span className="text-red-500">*</span>
+          Cantidad aplicada {insumoSeleccionado ? `(${insumoSeleccionado.unidad})` : ''} <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           required
@@ -143,7 +141,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
         )}
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Fecha <span className="text-red-500">*</span>
+          Fecha <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           type="date"
@@ -155,7 +153,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Quién la aplicó <span className="text-red-500">*</span>
+          Quién la aplicó <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <div className="mb-2 flex gap-2">
           {OPCIONES_RESPONSABLE.map((op) => (
@@ -187,7 +185,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
         )}
         {responsableOpcion !== 'Otro' && <div className="mb-4" />}
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>{error}</p>}
 
         <div className="mt-1 flex gap-2">
           <button
@@ -207,6 +205,18 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
             {guardando ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
+
+        {editando && (
+          <BotonBorrarRegistro
+            etiqueta="esta aplicación"
+            descripcion="Se le va a devolver al inventario el insumo que esta aplicación había descontado."
+            onBorrar={() => borrarAplicacion(aplicacionExistente!)}
+            onBorrado={() => {
+              onGuardado();
+              onCerrar();
+            }}
+          />
+        )}
       </form>
     </div>
   );

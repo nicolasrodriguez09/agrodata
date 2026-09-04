@@ -18,6 +18,7 @@ import FormularioRiego from '../components/FormularioRiego';
 import CalendarioActividad from '../components/CalendarioActividad';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoDialog from '../components/ui/InfoDialog';
+import { formatoFecha } from '../lib/fechas';
 import {
   IconArrowLeft,
   IconDroplet,
@@ -56,6 +57,7 @@ export default function LoteDetalle() {
   const [editandoAplicacion, setEditandoAplicacion] = useState<Aplicacion | null>(null);
   const [editandoCosecha, setEditandoCosecha] = useState<Cosecha | null>(null);
   const [editandoRiego, setEditandoRiego] = useState<Riego | null>(null);
+  const [editandoVenta, setEditandoVenta] = useState<Venta | null>(null);
   const [avisoSinCiclo, setAvisoSinCiclo] = useState(false);
   const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([]);
   const [cosechas, setCosechas] = useState<Cosecha[]>([]);
@@ -281,7 +283,7 @@ export default function LoteDetalle() {
                 {cicloSeleccionado.nombre}
               </p>
               <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                Abierto desde el {cicloSeleccionado.fechaInicio}
+                Abierto desde el {formatoFecha(cicloSeleccionado.fechaInicio)}
               </p>
             </div>
             <button
@@ -301,7 +303,7 @@ export default function LoteDetalle() {
                 {cicloSeleccionado.nombre}
               </p>
               <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                Del {cicloSeleccionado.fechaInicio} al {cicloSeleccionado.fechaCierre} · solo consulta
+                Del {formatoFecha(cicloSeleccionado.fechaInicio)} al {formatoFecha(cicloSeleccionado.fechaCierre ?? "")} · solo consulta
               </p>
             </div>
             {cicloActivo && (
@@ -574,7 +576,7 @@ export default function LoteDetalle() {
                                   : `Riego${item.data.metodo ? `: ${item.data.metodo}` : ''}`}
                             </p>
                             <p className="flex-none text-xs" style={{ color: 'var(--text-dim)' }}>
-                              {item.fecha}
+                              {formatoFecha(item.fecha)}
                             </p>
                           </div>
                           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
@@ -611,9 +613,11 @@ export default function LoteDetalle() {
           ) : (
             <div className="flex flex-col gap-2">
               {ventas.map((v) => (
-                <div
+                <button
                   key={v.id}
-                  className="rounded-xl border p-3.5"
+                  type="button"
+                  onClick={() => setEditandoVenta(v)}
+                  className="rounded-xl border p-3.5 text-left transition hover:brightness-95 active:scale-[0.99]"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -633,9 +637,9 @@ export default function LoteDetalle() {
                   </div>
                   <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
                     {v.cantidad}
-                    {v.comprador ? ` · ${v.comprador}` : ''} · {v.fecha}
+                    {v.comprador ? ` · ${v.comprador}` : ''} · {formatoFecha(v.fecha)}
                   </p>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -665,7 +669,7 @@ export default function LoteDetalle() {
                 {c.nombre}
               </span>
               <span style={{ color: 'var(--text-dim)' }}>
-                {c.fechaInicio} → {c.fechaCierre}
+                {formatoFecha(c.fechaInicio)} → {c.fechaCierre ? formatoFecha(c.fechaCierre) : "hoy"}
               </span>
             </button>
           ))}
@@ -730,6 +734,15 @@ export default function LoteDetalle() {
           cicloId={editandoRiego.cicloId}
           riegoExistente={editandoRiego}
           onCerrar={() => setEditandoRiego(null)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
+      {editandoVenta && (
+        <FormularioVenta
+          loteId={editandoVenta.loteId}
+          cicloId={editandoVenta.cicloId}
+          ventaExistente={editandoVenta}
+          onCerrar={() => setEditandoVenta(null)}
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />
       )}

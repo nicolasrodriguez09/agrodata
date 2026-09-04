@@ -1,35 +1,39 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { crearJornal } from '../lib/jornales';
+import { crearJornal, actualizarJornal, borrarJornal } from '../lib/jornales';
 import { escucharLotes } from '../lib/lotes';
 import { escucharFincas } from '../lib/fincas';
 import { useAuth } from '../lib/AuthContext';
-import type { Finca, Lote } from '../types/models';
+import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
+import type { Finca, Jornal, Lote } from '../types/models';
+import { hoyISO } from '../lib/fechas';
 
 interface Props {
+  jornalExistente?: Jornal | null;
   onCerrar: () => void;
   onGuardado: () => void;
 }
 
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 const OPCIONES_QUIEN_PAGO = ['Freddy', 'Emerson', 'Otro'];
 
-export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
+export default function FormularioJornal({ jornalExistente, onCerrar, onGuardado }: Props) {
   const { user } = useAuth();
+  const editando = !!jornalExistente;
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [fincas, setFincas] = useState<Finca[]>([]);
-  const [loteId, setLoteId] = useState('');
-  const [trabajador, setTrabajador] = useState('');
-  const [labor, setLabor] = useState('');
-  const [fecha, setFecha] = useState(hoyISO());
-  const [unidad, setUnidad] = useState<'dia' | 'hora'>('dia');
-  const [cantidad, setCantidad] = useState('');
-  const [tarifa, setTarifa] = useState('');
-  const [quienPagoOpcion, setQuienPagoOpcion] = useState<string | null>(null);
-  const [otroNombre, setOtroNombre] = useState('');
-  const [pagado, setPagado] = useState<boolean | null>(null);
+  const [loteId, setLoteId] = useState(jornalExistente?.loteId ?? '');
+  const [trabajador, setTrabajador] = useState(jornalExistente?.trabajador ?? '');
+  const [labor, setLabor] = useState(jornalExistente?.labor ?? '');
+  const [fecha, setFecha] = useState(jornalExistente?.fecha ?? hoyISO());
+  const [unidad, setUnidad] = useState<'dia' | 'hora'>(jornalExistente?.unidad ?? 'dia');
+  const [cantidad, setCantidad] = useState(jornalExistente ? String(jornalExistente.cantidad) : '');
+  const [tarifa, setTarifa] = useState(jornalExistente ? String(jornalExistente.tarifa) : '');
+  const quienPagoInicial = jornalExistente?.quienPago ?? null;
+  const esOpcionConocida = quienPagoInicial && OPCIONES_QUIEN_PAGO.slice(0, 2).includes(quienPagoInicial);
+  const [quienPagoOpcion, setQuienPagoOpcion] = useState<string | null>(
+    quienPagoInicial ? (esOpcionConocida ? quienPagoInicial : 'Otro') : null,
+  );
+  const [otroNombre, setOtroNombre] = useState(quienPagoInicial && !esOpcionConocida ? quienPagoInicial : '');
+  const [pagado, setPagado] = useState<boolean | null>(jornalExistente?.pagado ?? null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,22 +52,22 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!quienPagoOpcion || (quienPagoOpcion === 'Otro' && !otroNombre.trim())) {
-      setError('Elegí quién pagó.');
+      setError('Elige quién pagó.');
       return;
     }
     if (pagado === null) {
-      setError('Decí si ya se pagó o no.');
+      setError('Indica si ya se pagó o no.');
       return;
     }
     if (!cantidadNum || cantidadNum <= 0 || !tarifaNum || tarifaNum <= 0) {
-      setError('Ingresá una cantidad y una tarifa válidas.');
+      setError('Ingresa una cantidad y una tarifa válidas.');
       return;
     }
     setGuardando(true);
     setError(null);
     try {
       const quienPago = quienPagoOpcion === 'Otro' ? otroNombre.trim() : quienPagoOpcion;
-      await crearJornal({
+      const datos = {
         loteId: loteId || undefined,
         trabajador,
         quienPago,
@@ -73,12 +77,16 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
         cantidad: cantidadNum,
         tarifa: tarifaNum,
         pagado,
-        creadoPor: user!.uid,
-      });
+      };
+      if (editando) {
+        await actualizarJornal(jornalExistente!.id, datos);
+      } else {
+        await crearJornal({ ...datos, creadoPor: user!.uid });
+      }
       onGuardado();
       onCerrar();
     } catch {
-      setError('No se pudo guardar. Probá de nuevo.');
+      setError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -96,11 +104,11 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
         style={{ backgroundColor: 'var(--surface)' }}
       >
         <h2 className="font-serif mb-4 text-lg font-semibold" style={{ color: 'var(--text)' }}>
-          Pago de jornal
+          {editando ? 'Editar jornal' : 'Pago de jornal'}
         </h2>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Nombre de la persona <span className="text-red-500">*</span>
+          Nombre de la persona <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           required
@@ -140,7 +148,7 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
         </select>
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Fecha <span className="text-red-500">*</span>
+          Fecha <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           type="date"
@@ -152,7 +160,7 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Se paga por <span className="text-red-500">*</span>
+          Se paga por <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <div className="mb-4 flex gap-2">
           {[
@@ -178,7 +186,7 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
         <div className="flex gap-3">
           <div className="flex-1">
             <label className={label} style={{ color: 'var(--text)' }}>
-              {unidad === 'dia' ? 'Días trabajados' : 'Horas trabajadas'} <span className="text-red-500">*</span>
+              {unidad === 'dia' ? 'Días trabajados' : 'Horas trabajadas'} <span style={{ color: 'var(--peligro)' }}>*</span>
             </label>
             <input
               required
@@ -194,7 +202,7 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
           </div>
           <div className="flex-1">
             <label className={label} style={{ color: 'var(--text)' }}>
-              Valor por {unidad === 'dia' ? 'día' : 'hora'} <span className="text-red-500">*</span>
+              Valor por {unidad === 'dia' ? 'día' : 'hora'} <span style={{ color: 'var(--peligro)' }}>*</span>
             </label>
             <input
               required
@@ -225,7 +233,7 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
         )}
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Quién pagó <span className="text-red-500">*</span>
+          Quién pagó <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <div className="mb-2 flex gap-2">
           {OPCIONES_QUIEN_PAGO.map((op) => (
@@ -258,7 +266,7 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
         {quienPagoOpcion !== 'Otro' && <div className="mb-4" />}
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          ¿Ya se pagó? <span className="text-red-500">*</span>
+          ¿Ya se pagó? <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <div className="mb-4 flex gap-2">
           {[
@@ -281,7 +289,7 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
           ))}
         </div>
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>{error}</p>}
 
         <div className="mt-1 flex gap-2">
           <button
@@ -301,6 +309,17 @@ export default function FormularioJornal({ onCerrar, onGuardado }: Props) {
             {guardando ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
+
+        {editando && (
+          <BotonBorrarRegistro
+            etiqueta="este jornal"
+            onBorrar={() => borrarJornal(jornalExistente!.id)}
+            onBorrado={() => {
+              onGuardado();
+              onCerrar();
+            }}
+          />
+        )}
       </form>
     </div>
   );

@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { crearCosecha, actualizarCosecha } from '../lib/cosechas';
+import { crearCosecha, actualizarCosecha, borrarCosecha } from '../lib/cosechas';
 import { useAuth } from '../lib/AuthContext';
+import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
 import type { Cosecha } from '../types/models';
+import { hoyISO } from '../lib/fechas';
 
 interface Props {
   loteId: string;
@@ -9,10 +11,6 @@ interface Props {
   cosechaExistente?: Cosecha | null;
   onCerrar: () => void;
   onGuardado: () => void;
-}
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 const OPCIONES_CALIDAD = ['Selecta', 'No selecta'];
@@ -39,7 +37,7 @@ export default function FormularioCosecha({ loteId, cicloId, cosechaExistente, o
       onGuardado();
       onCerrar();
     } catch {
-      setError('No se pudo guardar. Probá de nuevo.');
+      setError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -61,13 +59,13 @@ export default function FormularioCosecha({ loteId, cicloId, cosechaExistente, o
         </h2>
         {!editando && (
           <p className="mb-4 text-sm" style={{ color: 'var(--text-dim)' }}>
-            Si hoy recogieron más de una calidad, cargá un registro por cada una.
+            Si hoy recogieron más de una calidad, registra una cosecha por cada una.
           </p>
         )}
         {editando && <div className="mb-4" />}
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Fecha <span className="text-red-500">*</span>
+          Fecha <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           type="date"
@@ -79,7 +77,7 @@ export default function FormularioCosecha({ loteId, cicloId, cosechaExistente, o
         />
 
         <label className={label} style={{ color: 'var(--text)' }}>
-          Cantidad <span className="text-red-500">*</span>
+          Cantidad <span style={{ color: 'var(--peligro)' }}>*</span>
         </label>
         <input
           required
@@ -111,7 +109,7 @@ export default function FormularioCosecha({ loteId, cicloId, cosechaExistente, o
           ))}
         </div>
 
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>{error}</p>}
 
         <div className="mt-1 flex gap-2">
           <button
@@ -131,6 +129,17 @@ export default function FormularioCosecha({ loteId, cicloId, cosechaExistente, o
             {guardando ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
+
+        {editando && (
+          <BotonBorrarRegistro
+            etiqueta="esta cosecha"
+            onBorrar={() => borrarCosecha(cosechaExistente!.id)}
+            onBorrado={() => {
+              onGuardado();
+              onCerrar();
+            }}
+          />
+        )}
       </form>
     </div>
   );

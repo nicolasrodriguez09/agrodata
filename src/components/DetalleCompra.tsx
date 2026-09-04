@@ -1,12 +1,14 @@
 import type { CompraInsumo } from '../types/models';
 import { IconTag } from './ui/Icons';
+import { formatoFecha } from '../lib/fechas';
 
 interface Props {
   compra: CompraInsumo;
+  onEditar?: () => void;
   onCerrar: () => void;
 }
 
-export default function DetalleCompra({ compra, onCerrar }: Props) {
+export default function DetalleCompra({ compra, onEditar, onCerrar }: Props) {
   return (
     <div className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center" onClick={onCerrar}>
       <div
@@ -53,7 +55,7 @@ export default function DetalleCompra({ compra, onCerrar }: Props) {
           <div className="flex items-center justify-between">
             <span style={{ color: 'var(--text-dim)' }}>Fecha</span>
             <span className="font-medium" style={{ color: 'var(--text)' }}>
-              {compra.fecha}
+              {formatoFecha(compra.fecha)}
             </span>
           </div>
           <div className="flex items-center justify-between">
@@ -70,14 +72,26 @@ export default function DetalleCompra({ compra, onCerrar }: Props) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onCerrar}
-          className="mt-5 w-full rounded-xl border py-3 text-sm font-medium"
-          style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
-        >
-          Cerrar
-        </button>
+        <div className="mt-5 flex gap-2">
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="flex-1 rounded-xl border py-3 text-sm font-medium"
+            style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+          >
+            Cerrar
+          </button>
+          {onEditar && (
+            <button
+              type="button"
+              onClick={onEditar}
+              className="flex-1 rounded-xl py-3 text-sm font-medium"
+              style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
+            >
+              Editar
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

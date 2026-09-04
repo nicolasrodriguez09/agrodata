@@ -1,4 +1,4 @@
-import { collection, addDoc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Venta } from '../types/models';
 
@@ -40,4 +40,21 @@ export async function crearVenta(data: DatosVenta) {
     cobrado: data.cobrado,
     creadoPor: data.creadoPor,
   });
+}
+
+export async function actualizarVenta(
+  id: string,
+  data: Pick<DatosVenta, 'fecha' | 'cantidad' | 'precio' | 'comprador' | 'cobrado'>,
+) {
+  await updateDoc(doc(db, 'ventas', id), {
+    fecha: data.fecha,
+    cantidad: data.cantidad.trim(),
+    precio: data.precio,
+    comprador: data.comprador?.trim() || null,
+    cobrado: data.cobrado,
+  });
+}
+
+export async function borrarVenta(id: string) {
+  await deleteDoc(doc(db, 'ventas', id));
 }

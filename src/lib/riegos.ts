@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Riego } from '../types/models';
 
@@ -50,4 +50,8 @@ export async function actualizarRiego(
     metodo: data.metodo?.trim() || null,
     responsable: data.responsable.trim(),
   });
+}
+
+export async function borrarRiego(id: string) {
+  await deleteDoc(doc(db, 'riegos', id));
 }
