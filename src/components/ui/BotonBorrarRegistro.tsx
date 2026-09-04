@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
+import { mensajeParaUsuario } from '../../lib/errores';
 import { IconTrash } from './Icons';
 
 interface Props {
@@ -23,8 +24,10 @@ export default function BotonBorrarRegistro({ etiqueta, descripcion, onBorrar, o
     try {
       await onBorrar();
       onBorrado();
-    } catch {
-      setError('No se pudo borrar. Intenta de nuevo.');
+    } catch (err) {
+      // Si el motivo es explicable (ej. dejaría el inventario en negativo) se
+      // muestra tal cual; si es una falla técnica, el mensaje genérico.
+      setError(mensajeParaUsuario(err, 'No se pudo borrar. Intenta de nuevo.'));
     } finally {
       setBorrando(false);
     }

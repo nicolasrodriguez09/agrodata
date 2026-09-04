@@ -6,6 +6,7 @@ import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
 import SelectorInsumo from './finanzas/SelectorInsumo';
 import type { Aplicacion, InsumoInventario } from '../types/models';
 import { hoyISO } from '../lib/fechas';
+import { formatoCantidad } from '../lib/cantidades';
 
 interface Props {
   loteId: string;
@@ -105,7 +106,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
         <SelectorInsumo insumos={insumos} valor={insumoId} onChange={setInsumoId} creadoPor={user!.uid} />
         {insumoSeleccionado && (
           <p className="-mt-2.5 mb-4 text-xs" style={{ color: 'var(--text-dim)' }}>
-            Stock disponible: {insumoSeleccionado.stockActual} {insumoSeleccionado.unidad}
+            Stock disponible: {formatoCantidad(insumoSeleccionado.stockActual)} {insumoSeleccionado.unidad}
           </p>
         )}
 

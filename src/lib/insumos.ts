@@ -1,6 +1,27 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, increment, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, getDocs, increment, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
+import { ErrorDeNegocio } from './errores';
+import { formatoCantidad } from './cantidades';
 import type { InsumoInventario, MovimientoInventario } from '../types/models';
+
+/** Margen para que la coma flotante no dispare el bloqueo (0.1 - 0.1 puede dar -1e-17). */
+const TOLERANCIA = 0.001;
+
+/**
+ * Se intentó descontar más stock del que hay. Lleva los números para poder
+ * explicarle al usuario exactamente por qué no se puede.
+ */
+export class StockInsuficiente extends ErrorDeNegocio {
+  constructor(nombreInsumo: string, stockActual: number, aDescontar: number, unidad: string) {
+    super(
+      `No se puede: "${nombreInsumo}" tiene ${formatoCantidad(stockActual)} ${unidad} en inventario y esta ` +
+        `acción le descontaría ${formatoCantidad(aDescontar)}, dejándolo en ` +
+        `${formatoCantidad(stockActual - aDescontar)}. Un stock negativo significaría que se aplicó insumo ` +
+        `que nunca entró. Primero borra las aplicaciones que sobran, o registra la compra que falta.`,
+    );
+    this.name = 'StockInsuficiente';
+  }
+}
 
 export function escucharInsumos(callback: (insumos: InsumoInventario[]) => void) {
   const q = query(collection(db, 'insumos'));
@@ -130,6 +151,20 @@ export async function ajustarStock(data: {
   creadoPor: string;
 }) {
   if (data.delta === 0) return;
+
+  // Bajar el stock por debajo de cero deja un estado imposible: insumo aplicado
+  // a los lotes que nunca entró al inventario. Se corta acá con el motivo, en
+  // vez de guardar el negativo. El getDoc sale de la caché local, así que la
+  // validación también funciona sin señal.
+  if (data.delta < 0) {
+    const snap = await getDoc(doc(db, 'insumos', data.insumoId));
+    const insumo = snap.data() as Omit<InsumoInventario, 'id'> | undefined;
+    const stock = insumo?.stockActual ?? 0;
+    if (stock + data.delta < -TOLERANCIA) {
+      throw new StockInsuficiente(insumo?.nombre ?? 'Este insumo', stock, -data.delta, insumo?.unidad ?? '');
+    }
+  }
+
   await updateDoc(doc(db, 'insumos', data.insumoId), {
     stockActual: increment(data.delta),
   });

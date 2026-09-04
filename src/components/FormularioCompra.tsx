@@ -8,6 +8,7 @@ import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
 import SelectorInsumo from './finanzas/SelectorInsumo';
 import type { CompraInsumo, InsumoInventario } from '../types/models';
 import { hoyISO } from '../lib/fechas';
+import { mensajeParaUsuario } from '../lib/errores';
 
 interface Props {
   compraExistente?: CompraInsumo | null;
@@ -90,8 +91,8 @@ export default function FormularioCompra({ compraExistente, onCerrar, onGuardado
       }
       onGuardado();
       onCerrar();
-    } catch {
-      setError('No se pudo guardar. Intenta de nuevo.');
+    } catch (err) {
+      setError(mensajeParaUsuario(err, 'No se pudo guardar. Intenta de nuevo.'));
     } finally {
       setGuardando(false);
       setSubiendoFoto(false);

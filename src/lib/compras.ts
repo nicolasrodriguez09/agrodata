@@ -55,6 +55,21 @@ export async function actualizarCompra(
   compraExistente: CompraInsumo,
   data: Pick<DatosCompra, 'producto' | 'cantidad' | 'costo' | 'fecha' | 'proveedor' | 'personaQueCompro'>,
 ) {
+  // El ajuste de stock va PRIMERO porque puede fallar (si bajar la cantidad
+  // dejaría el inventario en negativo, ajustarStock lanza StockInsuficiente).
+  // Si se actualizara la compra antes, quedaría editada con el stock sin
+  // ajustar, que es peor que no haber hecho nada.
+  if (compraExistente.insumoId) {
+    await ajustarStock({
+      insumoId: compraExistente.insumoId,
+      delta: data.cantidad - (compraExistente.cantidad ?? 0),
+      costoUnitario: data.costo / data.cantidad,
+      origenId: compraExistente.id,
+      fecha: data.fecha,
+      creadoPor: compraExistente.creadoPor,
+    });
+  }
+
   await updateDoc(doc(db, 'compras', compraExistente.id), {
     producto: data.producto.trim(),
     cantidad: data.cantidad,
@@ -64,21 +79,14 @@ export async function actualizarCompra(
     personaQueCompro: data.personaQueCompro.trim(),
   });
 
-  if (!compraExistente.insumoId) return; // compras viejas, de antes del inventario
-
-  const delta = data.cantidad - (compraExistente.cantidad ?? 0);
-  await ajustarStock({
-    insumoId: compraExistente.insumoId,
-    delta,
-    costoUnitario: data.costo / data.cantidad,
-    origenId: compraExistente.id,
-    fecha: data.fecha,
-    creadoPor: compraExistente.creadoPor,
-  });
-  await recalcularCostoUnitario(compraExistente.insumoId);
+  if (compraExistente.insumoId) await recalcularCostoUnitario(compraExistente.insumoId);
 }
 
-/** Borra la compra y le devuelve al inventario el stock que había cargado. */
+/**
+ * Borra la compra y le descuenta del inventario el stock que había cargado.
+ * El descuento va antes del borrado a propósito: si dejaría el stock en
+ * negativo, ajustarStock corta y la compra no se borra.
+ */
 export async function borrarCompra(compra: CompraInsumo) {
   if (compra.insumoId && (compra.cantidad ?? 0) > 0) {
     await ajustarStock({

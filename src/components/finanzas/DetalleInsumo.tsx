@@ -6,6 +6,7 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import InfoDialog from '../ui/InfoDialog';
 import { IconArrowLeft, IconBox, IconPencil, IconTrash } from '../ui/Icons';
 import { formatoFecha } from '../../lib/fechas';
+import { formatoCantidad } from '../../lib/cantidades';
 
 interface Props {
   insumo: InsumoInventario;
@@ -134,7 +135,7 @@ export default function DetalleInsumo({ insumo, onCerrar }: Props) {
               Stock actual
             </p>
             <p className="font-serif text-xl font-semibold" style={{ color: insumo.stockActual < 0 ? '#b4552f' : 'var(--text)' }}>
-              {insumo.stockActual} {insumo.unidad}
+              {formatoCantidad(insumo.stockActual)} {insumo.unidad}
             </p>
           </div>
           <div className="rounded-xl border p-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
@@ -180,7 +181,7 @@ export default function DetalleInsumo({ insumo, onCerrar }: Props) {
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-serif font-semibold" style={{ color: 'var(--text)' }}>
                         {esEntrada ? '+' : '−'}
-                        {m.cantidad} {insumo.unidad}
+                        {formatoCantidad(m.cantidad)} {insumo.unidad}
                       </p>
                       <p className="flex-none text-xs" style={{ color: 'var(--text-dim)' }}>
                         {formatoFecha(m.fecha)}

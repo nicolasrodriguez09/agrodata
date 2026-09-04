@@ -16,6 +16,7 @@ import DetalleInsumo from '../components/finanzas/DetalleInsumo';
 import { IconTag, IconUsers, IconWallet, IconPlus, IconSearch, IconChart, IconBox } from '../components/ui/Icons';
 import VerMas from '../components/ui/VerMas';
 import { usePaginacion } from '../lib/usePaginacion';
+import { formatoCantidad } from '../lib/cantidades';
 
 type Tab = 'resumen' | 'jornales' | 'compras' | 'inventario';
 
@@ -481,7 +482,7 @@ export default function Finanzas() {
                           {i.nombre}
                         </p>
                         <p className="flex-none font-medium" style={{ color: i.stockActual < 0 ? '#b4552f' : 'var(--text)' }}>
-                          {i.stockActual} {i.unidad}
+                          {formatoCantidad(i.stockActual)} {i.unidad}
                         </p>
                       </div>
                       <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
