@@ -194,7 +194,16 @@ export default function Reporte() {
   const totalInsumos = modo === 'ciclo' ? (resumenCiclo?.totalGastado ?? 0) : aplicaciones.reduce((s, a) => s + (a.costoEstimado ?? 0), 0);
   const totalJornalesMonto = jornales.reduce((s, j) => s + j.valor, 0);
   const totalCompras = compras.reduce((s, c) => s + c.costo, 0);
-  const totalInvertido = totalInsumos + totalJornalesMonto + totalCompras;
+  // El gasto se mide distinto segun el alcance, y sumar las dos formas contaria
+  // el mismo insumo dos veces (la aplicacion consume justo lo que la compra
+  // metio al inventario):
+  //   - Por ciclo: lo aplicado a ESE lote + sus jornales. Las compras no entran
+  //     porque no son de un lote puntual.
+  //   - Por periodo: la plata que salio de verdad, compras + jornales, igual que
+  //     el total de Finanzas. Las aplicaciones quedan como detalle de en que
+  //     lote se uso cada cosa, sin volver a sumarse.
+  const totalInvertido =
+    modo === 'ciclo' ? totalInsumos + totalJornalesMonto : totalCompras + totalJornalesMonto;
   const balance = totalVendido - totalInvertido;
   const retornoPct = totalInvertido > 0 ? (balance / totalInvertido) * 100 : null;
 
@@ -214,6 +223,7 @@ export default function Reporte() {
     setExportando(true);
     try {
       await exportarExcel({
+        modo,
         alcance,
         generadoEl,
         aplicaciones,
@@ -391,6 +401,9 @@ export default function Reporte() {
               </p>
               <p className="font-serif text-sm font-semibold" style={{ color: 'var(--text)' }}>
                 $ {totalInvertido.toLocaleString('es-CO')}
+              </p>
+              <p className="mt-0.5 text-[10px] leading-tight" style={{ color: 'var(--text-dim)' }}>
+                {modo === 'ciclo' ? 'insumos aplicados + jornales' : 'compras + jornales'}
               </p>
             </div>
             <div

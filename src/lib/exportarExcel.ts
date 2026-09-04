@@ -4,6 +4,8 @@ import type { Aplicacion, CompraInsumo, Cosecha, Jornal, Riego, Venta } from '..
 import { hoyISO } from './fechas';
 
 export interface DatosReporteExcel {
+  /** Cambia como se calcula el invertido; ver la fila "Invertido" del Resumen. */
+  modo: 'ciclo' | 'periodo';
   alcance: string;
   generadoEl: string;
   aplicaciones: Aplicacion[];
@@ -128,7 +130,9 @@ export async function exportarExcel(datos: DatosReporteExcel) {
   const filaEncabezadoResumen = hojaResumen.addRow(['Concepto', 'Valor']);
   estiloEncabezado(filaEncabezadoResumen);
   const filaVendido = hojaResumen.addRow(['Vendido']);
-  const filaInvertido = hojaResumen.addRow(['Invertido (insumos + compras + jornales)']);
+  const filaInvertido = hojaResumen.addRow([
+    datos.modo === 'ciclo' ? 'Invertido (insumos aplicados + jornales del lote)' : 'Invertido (compras + jornales)',
+  ]);
   const filaBalance = hojaResumen.addRow(['Balance']);
   const filaRetorno = hojaResumen.addRow(['% Retorno']);
   [filaVendido, filaInvertido, filaBalance, filaRetorno].forEach((f) => {
@@ -220,6 +224,19 @@ export async function exportarExcel(datos: DatosReporteExcel) {
     datos.compras.map((c) => [fechaExcel(c.fecha), c.producto, c.cantidad ?? '', c.costo, c.proveedor ?? '', c.personaQueCompro, '']),
     4,
   );
+
+  // Una hoja Compras vacia en un reporte de ciclo parece un dato faltante, no una
+  // decision. Se deja dicho por que esta vacia.
+  if (datos.modo === 'ciclo') {
+    const hojaCompras = workbook.getWorksheet('Compras')!;
+    const nota = hojaCompras.addRow([]);
+    nota.getCell(1).value =
+      'Vacia a proposito: una compra de insumo no es de un lote puntual (un mismo bulto se reparte entre varios), ' +
+      'asi que cargarsela entera a este lote daria un costo falso. La compra entra al inventario y el costo llega ' +
+      'al lote por la hoja Aplicaciones, donde cada aplicacion toma su parte al precio de ese momento.';
+    nota.getCell(1).font = { italic: true, color: { argb: 'FF666666' } };
+    nota.alignment = { wrapText: true, vertical: 'top' };
+  }
   datos.compras.forEach((c, i) => {
     if (!c.fotoFacturaUrl) return;
     const celda = workbook.getWorksheet('Compras')!.getRow(i + 2).getCell(7);
@@ -263,9 +280,26 @@ export async function exportarExcel(datos: DatosReporteExcel) {
   celdaVendido.value = { formula: totalVentas! };
   celdaVendido.numFmt = FORMATO_MONEDA;
 
+  // Por ciclo el gasto del lote es lo que se le aplico; por periodo es la plata
+  // que salio (compras). Sumar ambos contaria el mismo insumo dos veces, porque
+  // la aplicacion consume justo lo que la compra metio al inventario.
   const celdaInvertido = filaInvertido.getCell(2);
-  celdaInvertido.value = { formula: `${totalAplicaciones}+${totalCompras}+${totalJornales}` };
+  celdaInvertido.value = {
+    formula:
+      datos.modo === 'ciclo'
+        ? `${totalAplicaciones}+${totalJornales}`
+        : `${totalCompras}+${totalJornales}`,
+  };
   celdaInvertido.numFmt = FORMATO_MONEDA;
+
+  // Deja escrito por que la hoja que NO se sumo no se sumo, para que nadie la
+  // sume a mano y termine contando el mismo insumo dos veces.
+  const filaNota = hojaResumen.addRow([]);
+  filaNota.getCell(1).value =
+    datos.modo === 'ciclo'
+      ? 'Las compras no se suman acá: no son de un lote puntual. El costo del insumo llega a este lote por la hoja Aplicaciones.'
+      : 'La hoja Aplicaciones no se suma acá: muestra en qué lote se usó cada insumo, pero esa plata ya está contada en Compras.';
+  filaNota.getCell(1).font = { italic: true, size: 9, color: { argb: 'FF666666' } };
 
   const celdaBalance = filaBalance.getCell(2);
   celdaBalance.value = { formula: `B${filaVendido.number}-B${filaInvertido.number}` };
