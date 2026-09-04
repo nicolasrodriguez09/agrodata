@@ -16,7 +16,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center text-gray-400">Cargando...</div>;
+    return <div className="flex min-h-screen items-center justify-center" style={{ color: 'var(--text-dim)' }}>Cargando...</div>;
   }
   if (!user) {
     return <Navigate to="/login" replace />;

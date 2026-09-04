@@ -34,9 +34,12 @@ export default function AgregarUsuario() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm shadow-stone-900/5"
+      className="rounded-2xl border p-4"
+      style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
     >
-      <h3 className="mb-3 text-sm font-semibold text-stone-700">Agregar usuario</h3>
+      <h3 className="mb-3 font-serif text-base font-semibold" style={{ color: 'var(--text)' }}>
+        Agregar usuario
+      </h3>
 
       <input
         type="email"
@@ -44,7 +47,8 @@ export default function AgregarUsuario() {
         placeholder="Correo"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="mb-2 w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100"
+        className="mb-2 w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
       />
       <input
         type="text"
@@ -53,11 +57,12 @@ export default function AgregarUsuario() {
         placeholder="Contraseña (mínimo 6 caracteres)"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="mb-2 w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100"
+        className="mb-2 w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
       />
 
       {mensaje && (
-        <p className={`mb-2 text-sm ${mensaje.tipo === 'ok' ? 'text-green-700' : 'text-red-600'}`}>
+        <p className="mb-2 text-sm" style={{ color: mensaje.tipo === 'ok' ? 'var(--recent)' : 'var(--peligro)' }}>
           {mensaje.texto}
         </p>
       )}

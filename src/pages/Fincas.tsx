@@ -59,7 +59,7 @@ export default function Fincas() {
       }
       setMostrarForm(false);
     } catch {
-      setError('No se pudo guardar. Probá de nuevo.');
+      setError('No se pudo guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -80,26 +80,32 @@ export default function Fincas() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-800">
+      <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--text-dim)' }}>
         <IconArrowLeft className="h-4 w-4" />
         Mis lotes
       </Link>
 
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-stone-900">Fincas</h1>
+        <h1 className="font-serif text-2xl font-semibold" style={{ color: 'var(--text)' }}>
+          Fincas
+        </h1>
         <Button onClick={abrirNueva} className="px-4 py-2.5 text-sm">
           <IconPlus className="h-4 w-4" />
           Nueva finca
         </Button>
       </div>
 
-      {cargando && <p className="text-sm text-stone-400">Cargando...</p>}
+      {cargando && (
+        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+          Cargando...
+        </p>
+      )}
 
       {!cargando && fincas.length === 0 && (
         <EmptyState
           icon={<IconMap className="h-6 w-6" />}
           title="Todavía no hay fincas"
-          description="Registrá la primera para empezar a agrupar tus lotes."
+          description="Registra la primera para empezar a agrupar tus lotes."
         />
       )}
 
@@ -107,26 +113,37 @@ export default function Fincas() {
         {fincas.map((finca) => (
           <Card key={finca.id} className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 text-green-700">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-lg"
+                style={{ backgroundColor: 'var(--recent)', color: 'var(--recent-text)' }}
+              >
                 <IconMap className="h-4.5 w-4.5" />
               </div>
               <div>
-                <p className="font-medium text-stone-900">{finca.nombre}</p>
-                {finca.ubicacion && <p className="text-sm text-stone-500">{finca.ubicacion}</p>}
+                <p className="font-serif font-semibold" style={{ color: 'var(--text)' }}>
+                  {finca.nombre}
+                </p>
+                {finca.ubicacion && (
+                  <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                    {finca.ubicacion}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex gap-1">
               <button
                 onClick={() => abrirEditar(finca)}
                 aria-label="Editar"
-                className="rounded-lg p-2 text-stone-400 hover:bg-stone-100 hover:text-green-700"
+                className="rounded-lg p-2"
+                style={{ color: 'var(--text-dim)' }}
               >
                 <IconPencil className="h-4.5 w-4.5" />
               </button>
               <button
                 onClick={() => setABorrar(finca)}
                 aria-label="Borrar"
-                className="rounded-lg p-2 text-stone-400 hover:bg-red-50 hover:text-red-600"
+                className="rounded-lg p-2"
+                style={{ color: 'var(--peligro)' }}
               >
                 <IconTrash className="h-4.5 w-4.5" />
               </button>
@@ -136,35 +153,42 @@ export default function Fincas() {
       </div>
 
       {mostrarForm && (
-        <div className="fixed inset-0 z-20 flex items-end bg-stone-900/40 sm:items-center sm:justify-center">
+        <div className="fixed inset-0 z-30 flex items-end bg-black/40 sm:items-center sm:justify-center">
           <form
             onSubmit={handleSubmit}
-            className="w-full rounded-t-2xl bg-white p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
+            className="w-full rounded-t-2xl border p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
+            style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
           >
-            <h2 className="mb-4 text-base font-semibold text-stone-900">
+            <h2 className="font-serif mb-4 text-lg font-semibold" style={{ color: 'var(--text)' }}>
               {editando ? 'Editar finca' : 'Nueva finca'}
             </h2>
 
-            <label className="mb-1.5 block text-sm font-medium text-stone-700">
-              Nombre <span className="text-red-500">*</span>
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: 'var(--text)' }}>
+              Nombre <span style={{ color: 'var(--peligro)' }}>*</span>
             </label>
             <input
               required
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="mb-4 w-full rounded-xl border border-stone-300 px-4 py-3 text-base focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100"
+              className="mb-4 w-full rounded-xl border px-4 py-3 text-base focus:outline-none"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
             />
 
-            <label className="mb-1.5 block text-sm font-medium text-stone-700">
+            <label className="mb-1.5 block text-sm font-medium" style={{ color: 'var(--text)' }}>
               Ubicación (opcional)
             </label>
             <input
               value={ubicacion}
               onChange={(e) => setUbicacion(e.target.value)}
-              className="mb-4 w-full rounded-xl border border-stone-300 px-4 py-3 text-base focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100"
+              className="mb-4 w-full rounded-xl border px-4 py-3 text-base focus:outline-none"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
             />
 
-            {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+            {error && (
+              <p className="mb-3 text-sm" style={{ color: 'var(--peligro)' }}>
+                {error}
+              </p>
+            )}
 
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={() => setMostrarForm(false)} className="flex-1">
@@ -191,7 +215,7 @@ export default function Fincas() {
       <InfoDialog
         open={avisoNoSeBorra}
         title="No se puede borrar esta finca"
-        description="Todavía tiene lotes asociados. Movés o borrás esos lotes primero."
+        description="Todavía tiene lotes asociados. Mueve o borra esos lotes primero."
         tono="error"
         onClose={() => setAvisoNoSeBorra(false)}
       />

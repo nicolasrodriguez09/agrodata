@@ -105,7 +105,7 @@ export default function SelectorInsumo({ insumos, valor, onChange, creadoPor }: 
       style={campoEstilo}
     >
       <option value="" disabled>
-        Elegí un insumo
+        Elige un insumo
       </option>
       {insumos.map((i) => (
         <option key={i.id} value={i.id}>
