@@ -28,6 +28,8 @@ function leerPendientes(): FotoPendiente[] {
 
 function guardarPendientes(items: FotoPendiente[]) {
   localStorage.setItem(PENDING_KEY, JSON.stringify(items));
+  // Avisa al indicador de sincronización del header que la cola cambió.
+  window.dispatchEvent(new Event('agrodata:fotos-pendientes'));
 }
 
 function fileToDataUrl(file: File): Promise<string> {

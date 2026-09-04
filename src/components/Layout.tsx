@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { useTheme } from '../lib/ThemeContext';
 import { IconLeaf, IconWallet, IconChart, IconSun, IconMoon } from './ui/Icons';
+import EstadoSincronizacion from './EstadoSincronizacion';
 
 const navItems = [
   { to: '/', label: 'Lotes', end: true, Icon: IconLeaf },
@@ -23,7 +24,8 @@ export default function Layout() {
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--gold)' }} />
           AGRODATA
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <EstadoSincronizacion />
           <button
             onClick={alternar}
             aria-label="Cambiar tema"
