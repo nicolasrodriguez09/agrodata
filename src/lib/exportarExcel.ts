@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { formatoCantidadAplicacion } from './aplicaciones';
 import type { Aplicacion, CompraInsumo, Cosecha, Jornal, Riego, Venta } from '../types/models';
+import { hoyISO } from './fechas';
 
 export interface DatosReporteExcel {
   alcance: string;
@@ -299,7 +300,7 @@ export async function exportarExcel(datos: DatosReporteExcel) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `agrodata-reporte-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.download = `agrodata-reporte-${hoyISO()}.xlsx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

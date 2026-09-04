@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Finca, Lote, Venta } from '../../types/models';
 import { IconArrowLeft } from '../ui/Icons';
+import { formatoFecha } from '../../lib/fechas';
 
 interface Props {
   ventas: Venta[];
@@ -109,7 +110,7 @@ export default function DetalleVentasPeriodo({ ventas, lotes, fincas, etiquetaPe
                     </span>
                   </div>
                   <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                    {v.fecha} · {v.cantidad}
+                    {formatoFecha(v.fecha)} · {v.cantidad}
                     {v.comprador ? ` · ${v.comprador}` : ''}
                   </p>
                   <p className="mt-0.5 text-xs" style={{ color: 'var(--text-dim)' }}>

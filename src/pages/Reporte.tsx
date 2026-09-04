@@ -13,6 +13,7 @@ import { escucharJornales } from '../lib/jornales';
 import { exportarExcel } from '../lib/exportarExcel';
 import type { Aplicacion, Ciclo, CompraInsumo, Cosecha, Finca, Jornal, Lote, Riego, Venta } from '../types/models';
 import { IconArrowLeft, IconDroplet, IconBasket, IconWaves, IconTag, IconUsers } from '../components/ui/Icons';
+import { formatoFecha, formatoFechaLarga } from '../lib/fechas';
 
 const COLOR_GASTO = '#b4552f';
 const SUELTO = '__suelto__';
@@ -204,8 +205,8 @@ export default function Reporte() {
     modo === 'ciclo'
       ? loteSeleccionado && cicloSeleccionado
         ? `${loteSeleccionado.nombre} · ${nombreFinca(loteSeleccionado.fincaId)} — ${cicloSeleccionado.nombre}`
-        : 'Elegí un lote y un ciclo'
-      : `Toda la finca — ${desde ? desde : 'inicio'} a ${hasta ? hasta : 'hoy'}`;
+        : 'Elige un lote y un ciclo'
+      : `Toda la finca — ${desde ? formatoFechaLarga(desde) : 'inicio'} a ${hasta ? formatoFechaLarga(hasta) : 'hoy'}`;
 
   const generadoEl = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
 
@@ -297,7 +298,7 @@ export default function Reporte() {
                 className={campo}
                 style={campoEstilo}
               >
-                <option value="">Elegí un lote</option>
+                <option value="">Elige un lote</option>
                 {lotesFiltrados.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.nombre} · {nombreFinca(l.fincaId)}
@@ -310,12 +311,12 @@ export default function Reporte() {
                 Ciclo
               </label>
               <select value={cicloId} onChange={(e) => setCicloId(e.target.value)} disabled={!loteId} className={`${campo} disabled:opacity-50`} style={campoEstilo}>
-                <option value="">Elegí un ciclo</option>
+                <option value="">Elige un ciclo</option>
                 {[...ciclosDelLote]
                   .sort((a, b) => b.fechaInicio.localeCompare(a.fechaInicio))
                   .map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.nombre} {c.estado === 'abierto' ? '(activo)' : `· cerrado ${c.fechaCierre}`}
+                      {c.nombre} {c.estado === 'abierto' ? '(activo)' : `· cerrado ${formatoFecha(c.fechaCierre ?? '')}`}
                     </option>
                   ))}
               </select>
@@ -361,7 +362,7 @@ export default function Reporte() {
 
       {!listo ? (
         <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-          Elegí un lote y un ciclo arriba para armar el reporte.
+          Elige un lote y un ciclo arriba para armar el reporte.
         </p>
       ) : (
         <div>
@@ -449,7 +450,7 @@ export default function Reporte() {
                       fila(
                         { color: 'var(--recent)', colorTexto: 'var(--recent-text)', Icon: IconDroplet },
                         a.producto,
-                        `${a.fecha} · ${formatoCantidadAplicacion(a)}${a.dosis ? ` · ${a.dosis}` : ''} · aplicó ${a.responsable}${modo === 'periodo' ? ` · ${nombreLote(a.loteId)}` : ''}`,
+                        `${formatoFecha(a.fecha)} · ${formatoCantidadAplicacion(a)}${a.dosis ? ` · ${a.dosis}` : ''} · aplicó ${a.responsable}${modo === 'periodo' ? ` · ${nombreLote(a.loteId)}` : ''}`,
                         a.costoEstimado ?? null,
                         a.id,
                       ),
@@ -468,7 +469,7 @@ export default function Reporte() {
                       fila(
                         { color: 'var(--cosecha)', colorTexto: 'var(--cosecha-text)', Icon: IconBasket },
                         `Cosecha: ${c.cantidad}`,
-                        `${c.fecha} · ${c.calidad ?? 'Sin clasificar'}${modo === 'periodo' ? ` · ${nombreLote(c.loteId)}` : ''}`,
+                        `${formatoFecha(c.fecha)} · ${c.calidad ?? 'Sin clasificar'}${modo === 'periodo' ? ` · ${nombreLote(c.loteId)}` : ''}`,
                         null,
                         c.id,
                       ),
@@ -487,7 +488,7 @@ export default function Reporte() {
                       fila(
                         { color: 'var(--riego)', colorTexto: 'var(--riego-text)', Icon: IconWaves },
                         `Riego${r.metodo ? `: ${r.metodo}` : ''}`,
-                        `${r.fecha} · ${r.duracion ? `${r.duracion} · ` : ''}regó ${r.responsable}${modo === 'periodo' ? ` · ${nombreLote(r.loteId)}` : ''}`,
+                        `${formatoFecha(r.fecha)} · ${r.duracion ? `${r.duracion} · ` : ''}regó ${r.responsable}${modo === 'periodo' ? ` · ${nombreLote(r.loteId)}` : ''}`,
                         null,
                         r.id,
                       ),
@@ -506,7 +507,7 @@ export default function Reporte() {
                       fila(
                         { color: 'var(--gold)', colorTexto: 'var(--gold-ink)', Icon: IconTag },
                         `$ ${v.precio.toLocaleString('es-CO')}`,
-                        `${v.fecha} · ${v.cantidad}${v.comprador ? ` · ${v.comprador}` : ''} · ${v.cobrado ? 'Cobrado' : 'Pendiente'}${modo === 'periodo' ? ` · ${nombreLote(v.loteId)}` : ''}`,
+                        `${formatoFecha(v.fecha)} · ${v.cantidad}${v.comprador ? ` · ${v.comprador}` : ''} · ${v.cobrado ? 'Cobrado' : 'Pendiente'}${modo === 'periodo' ? ` · ${nombreLote(v.loteId)}` : ''}`,
                         null,
                         v.id,
                       ),
@@ -533,7 +534,7 @@ export default function Reporte() {
                               {c.producto}
                             </p>
                             <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                              {c.fecha}
+                              {formatoFecha(c.fecha)}
                               {c.proveedor ? ` · ${c.proveedor}` : ''} · compró {c.personaQueCompro}
                             </p>
                           </div>
@@ -565,7 +566,7 @@ export default function Reporte() {
                       fila(
                         { color: COLOR_GASTO, colorTexto: '#fbfaf2', Icon: IconUsers },
                         j.trabajador,
-                        `${j.fecha} · ${j.labor ? `${j.labor} · ` : ''}pagó ${j.quienPago}${modo === 'periodo' ? ` · ${nombreLote(j.loteId)}` : ''}`,
+                        `${formatoFecha(j.fecha)} · ${j.labor ? `${j.labor} · ` : ''}pagó ${j.quienPago}${modo === 'periodo' ? ` · ${nombreLote(j.loteId)}` : ''}`,
                         j.valor,
                         j.id,
                       ),

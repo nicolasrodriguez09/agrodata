@@ -6,6 +6,7 @@ import { escucharAplicacionesDeCiclo, formatoCantidadAplicacion } from '../../li
 import type { Aplicacion, Ciclo, Lote, Venta } from '../../types/models';
 import type { RentabilidadLote } from '../ResumenFinanzas';
 import { IconArrowLeft, IconDroplet, IconTag } from '../ui/Icons';
+import { formatoFecha } from '../../lib/fechas';
 
 interface Props {
   lote: Lote;
@@ -62,7 +63,6 @@ export default function DetalleFinancieroLote({ lote, nombreFinca, rentabilidad,
     };
   }, [cicloSeleccionadoId]);
 
-  const cicloSeleccionado = ciclos.find((c) => c.id === cicloSeleccionadoId);
   const ciclosOrdenados = [...ciclos].sort((a, b) => b.fechaInicio.localeCompare(a.fechaInicio));
 
   return (
@@ -159,7 +159,7 @@ export default function DetalleFinancieroLote({ lote, nombreFinca, rentabilidad,
             >
               {ciclosOrdenados.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.nombre} {c.estado === 'abierto' ? '(activo)' : `· cerrado ${c.fechaCierre}`}
+                  {c.nombre} {c.estado === 'abierto' ? '(activo)' : `· cerrado ${formatoFecha(c.fechaCierre ?? '')}`}
                 </option>
               ))}
             </select>
@@ -230,7 +230,7 @@ export default function DetalleFinancieroLote({ lote, nombreFinca, rentabilidad,
                         </p>
                       </div>
                       <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                        {a.fecha} · {formatoCantidadAplicacion(a)} · aplicó {a.responsable}
+                        {formatoFecha(a.fecha)} · {formatoCantidadAplicacion(a)} · aplicó {a.responsable}
                       </p>
                     </div>
                   </div>
@@ -269,7 +269,7 @@ export default function DetalleFinancieroLote({ lote, nombreFinca, rentabilidad,
                         </span>
                       </div>
                       <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                        {v.fecha} · {v.cantidad}
+                        {formatoFecha(v.fecha)} · {v.cantidad}
                         {v.comprador ? ` · ${v.comprador}` : ''}
                       </p>
                     </div>

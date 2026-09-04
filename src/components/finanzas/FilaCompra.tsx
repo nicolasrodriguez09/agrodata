@@ -1,5 +1,6 @@
 import type { CompraInsumo } from '../../types/models';
 import { IconTag } from '../ui/Icons';
+import { formatoFecha } from '../../lib/fechas';
 
 export default function FilaCompra({ compra, onClick }: { compra: CompraInsumo; onClick: () => void }) {
   return (
@@ -29,7 +30,7 @@ export default function FilaCompra({ compra, onClick }: { compra: CompraInsumo; 
           </p>
         </div>
         <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-          {compra.fecha}
+          {formatoFecha(compra.fecha)}
           {compra.proveedor ? ` · ${compra.proveedor}` : ''} · compró {compra.personaQueCompro}
         </p>
       </div>
