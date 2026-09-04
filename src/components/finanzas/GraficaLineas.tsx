@@ -22,20 +22,32 @@ function puntosDe(valores: number[], max: number) {
   });
 }
 
-/** Curva suave por punto medio: control = punto original, destino = punto medio con el siguiente. */
+/**
+ * Curva suave que SÍ pasa por cada punto (Catmull-Rom convertida a Bézier
+ * cúbica). Antes se usaban los puntos como control de una cuadrática hacia el
+ * punto medio, y con eso la línea nunca tocaba sus propios datos: en un mes de
+ * pico fuerte el marcador quedaba flotando lejos de la curva.
+ *
+ * La tensión baja (1/8 en vez del 1/6 clásico) evita que un cambio brusco
+ * dispare la curva por fuera del rango real de los datos.
+ */
 function pathSuave(puntos: { x: number; y: number }[]) {
   if (puntos.length === 0) return '';
   if (puntos.length === 1) return `M ${puntos[0].x} ${puntos[0].y} L ${puntos[0].x} ${puntos[0].y}`;
+
+  const en = (i: number) => puntos[Math.max(0, Math.min(puntos.length - 1, i))];
   let d = `M ${puntos[0].x} ${puntos[0].y}`;
   for (let i = 0; i < puntos.length - 1; i++) {
-    const actual = puntos[i];
-    const siguiente = puntos[i + 1];
-    const mx = (actual.x + siguiente.x) / 2;
-    const my = (actual.y + siguiente.y) / 2;
-    d += ` Q ${actual.x} ${actual.y}, ${mx} ${my}`;
+    const p0 = en(i - 1);
+    const p1 = en(i);
+    const p2 = en(i + 1);
+    const p3 = en(i + 2);
+    const c1x = p1.x + (p2.x - p0.x) / 8;
+    const c1y = p1.y + (p2.y - p0.y) / 8;
+    const c2x = p2.x - (p3.x - p1.x) / 8;
+    const c2y = p2.y - (p3.y - p1.y) / 8;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
   }
-  const ultimo = puntos[puntos.length - 1];
-  d += ` L ${ultimo.x} ${ultimo.y}`;
   return d;
 }
 
