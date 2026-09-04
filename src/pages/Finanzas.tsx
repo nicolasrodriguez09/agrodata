@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { escucharCompras } from '../lib/compras';
 import { escucharJornales } from '../lib/jornales';
 import { escucharInsumos, crearInsumo } from '../lib/insumos';
@@ -14,6 +14,8 @@ import FilaJornal from '../components/finanzas/FilaJornal';
 import FilaCompra from '../components/finanzas/FilaCompra';
 import DetalleInsumo from '../components/finanzas/DetalleInsumo';
 import { IconTag, IconUsers, IconWallet, IconPlus, IconSearch, IconChart, IconBox } from '../components/ui/Icons';
+import VerMas from '../components/ui/VerMas';
+import { usePaginacion } from '../lib/usePaginacion';
 
 type Tab = 'resumen' | 'jornales' | 'compras' | 'inventario';
 
@@ -40,6 +42,8 @@ export default function Finanzas() {
   const [unidadInsumoNuevo, setUnidadInsumoNuevo] = useState('');
   const [creandoInsumo, setCreandoInsumo] = useState(false);
   const [lotes, setLotes] = useState<Lote[]>([]);
+  const [editandoJornal, setEditandoJornal] = useState<Jornal | null>(null);
+  const [editandoCompra, setEditandoCompra] = useState<CompraInsumo | null>(null);
 
   useEffect(() => escucharCompras(setCompras), []);
   useEffect(() => escucharJornales(setJornales), []);
@@ -60,30 +64,47 @@ export default function Finanzas() {
   }
 
   const textoCompras = filtroTextoCompras.trim().toLowerCase();
-  const comprasFiltradas = compras.filter((c) => {
-    if (fechaDesdeCompras && c.fecha < fechaDesdeCompras) return false;
-    if (fechaHastaCompras && c.fecha > fechaHastaCompras) return false;
-    if (!textoCompras) return true;
-    return (
-      c.producto.toLowerCase().includes(textoCompras) ||
-      (c.proveedor ?? '').toLowerCase().includes(textoCompras) ||
-      c.personaQueCompro.toLowerCase().includes(textoCompras)
-    );
-  });
+  // Memoizado para no re-filtrar toda la coleccion en cada tecla del buscador.
+  const comprasFiltradas = useMemo(
+    () =>
+      compras.filter((c) => {
+        if (fechaDesdeCompras && c.fecha < fechaDesdeCompras) return false;
+        if (fechaHastaCompras && c.fecha > fechaHastaCompras) return false;
+        if (!textoCompras) return true;
+        return (
+          c.producto.toLowerCase().includes(textoCompras) ||
+          (c.proveedor ?? '').toLowerCase().includes(textoCompras) ||
+          c.personaQueCompro.toLowerCase().includes(textoCompras)
+        );
+      }),
+    [compras, fechaDesdeCompras, fechaHastaCompras, textoCompras],
+  );
+  const paginaCompras = usePaginacion(
+    comprasFiltradas,
+    `${textoCompras}|${fechaDesdeCompras}|${fechaHastaCompras}`,
+  );
   const hayFiltrosComprasActivos = !!textoCompras || !!fechaDesdeCompras || !!fechaHastaCompras;
   const totalCompras = comprasFiltradas.reduce((s, c) => s + c.costo, 0);
 
   const textoJornales = filtroTextoJornales.trim().toLowerCase();
-  const jornalesFiltrados = jornales.filter((j) => {
-    if (fechaDesdeJornales && j.fecha < fechaDesdeJornales) return false;
-    if (fechaHastaJornales && j.fecha > fechaHastaJornales) return false;
-    if (!textoJornales) return true;
-    return (
-      j.trabajador.toLowerCase().includes(textoJornales) ||
-      (j.labor ?? '').toLowerCase().includes(textoJornales) ||
-      j.quienPago.toLowerCase().includes(textoJornales)
-    );
-  });
+  const jornalesFiltrados = useMemo(
+    () =>
+      jornales.filter((j) => {
+        if (fechaDesdeJornales && j.fecha < fechaDesdeJornales) return false;
+        if (fechaHastaJornales && j.fecha > fechaHastaJornales) return false;
+        if (!textoJornales) return true;
+        return (
+          j.trabajador.toLowerCase().includes(textoJornales) ||
+          (j.labor ?? '').toLowerCase().includes(textoJornales) ||
+          j.quienPago.toLowerCase().includes(textoJornales)
+        );
+      }),
+    [jornales, fechaDesdeJornales, fechaHastaJornales, textoJornales],
+  );
+  const paginaJornales = usePaginacion(
+    jornalesFiltrados,
+    `${textoJornales}|${fechaDesdeJornales}|${fechaHastaJornales}`,
+  );
   const hayFiltrosJornalesActivos = !!textoJornales || !!fechaDesdeJornales || !!fechaHastaJornales;
   const totalJornales = jornalesFiltrados.reduce((s, j) => s + j.valor, 0);
 
@@ -170,7 +191,7 @@ export default function Finanzas() {
           <EmptyState
             icon={<IconWallet className="h-6 w-6" />}
             title="Todavía no hay pagos de jornales"
-            description="Registrá un jornal para llevar el costo real de la mano de obra."
+            description="Registra un jornal para llevar el costo real de la mano de obra."
             action={
               <button
                 onClick={() => setMostrarFormJornal(true)}
@@ -250,9 +271,17 @@ export default function Finanzas() {
               </p>
             ) : (
               <div className="flex flex-col gap-2">
-                {jornalesFiltrados.map((j) => (
-                  <FilaJornal key={j.id} jornal={j} lotes={lotes} />
+                {paginaJornales.visibles.map((j) => (
+                  <FilaJornal key={j.id} jornal={j} lotes={lotes} onClick={() => setEditandoJornal(j)} />
                 ))}
+                <VerMas
+                  mostrando={paginaJornales.mostrando}
+                  total={paginaJornales.total}
+                  hayMas={paginaJornales.hayMas}
+                  onVerMas={paginaJornales.verMas}
+                  onVerTodos={paginaJornales.verTodos}
+                  etiqueta="jornales"
+                />
               </div>
             )}
           </>
@@ -263,7 +292,7 @@ export default function Finanzas() {
           <EmptyState
             icon={<IconWallet className="h-6 w-6" />}
             title="Todavía no hay compras registradas"
-            description="Registrá una compra de insumo para llevar el costo real del negocio."
+            description="Registra una compra de insumo para llevar el costo real del negocio."
             action={
               <button
                 onClick={() => setMostrarFormCompra(true)}
@@ -343,9 +372,17 @@ export default function Finanzas() {
               </p>
             ) : (
               <div className="flex flex-col gap-2">
-                {comprasFiltradas.map((c) => (
+                {paginaCompras.visibles.map((c) => (
                   <FilaCompra key={c.id} compra={c} onClick={() => setCompraSeleccionada(c)} />
                 ))}
+                <VerMas
+                  mostrando={paginaCompras.mostrando}
+                  total={paginaCompras.total}
+                  hayMas={paginaCompras.hayMas}
+                  onVerMas={paginaCompras.verMas}
+                  onVerTodos={paginaCompras.verTodos}
+                  etiqueta="compras"
+                />
               </div>
             )}
           </>
@@ -403,7 +440,7 @@ export default function Finanzas() {
             <EmptyState
               icon={<IconBox className="h-6 w-6" />}
               title="Todavía no hay insumos en el inventario"
-              description="Registrá un insumo para llevar el stock y el costo de cada aplicación."
+              description="Registra un insumo para llevar el stock y el costo de cada aplicación."
               action={
                 <button
                   onClick={() => setMostrarFormInsumo(true)}
@@ -464,10 +501,31 @@ export default function Finanzas() {
         <FormularioCompra onCerrar={() => setMostrarFormCompra(false)} onGuardado={() => {}} />
       )}
       {compraSeleccionada && (
-        <DetalleCompra compra={compraSeleccionada} onCerrar={() => setCompraSeleccionada(null)} />
+        <DetalleCompra
+          compra={compraSeleccionada}
+          onEditar={() => {
+            setEditandoCompra(compraSeleccionada);
+            setCompraSeleccionada(null);
+          }}
+          onCerrar={() => setCompraSeleccionada(null)}
+        />
+      )}
+      {editandoCompra && (
+        <FormularioCompra
+          compraExistente={editandoCompra}
+          onCerrar={() => setEditandoCompra(null)}
+          onGuardado={() => {}}
+        />
       )}
       {mostrarFormJornal && (
         <FormularioJornal onCerrar={() => setMostrarFormJornal(false)} onGuardado={() => {}} />
+      )}
+      {editandoJornal && (
+        <FormularioJornal
+          jornalExistente={editandoJornal}
+          onCerrar={() => setEditandoJornal(null)}
+          onGuardado={() => {}}
+        />
       )}
       {insumoSeleccionado && (
         <DetalleInsumo insumo={insumoSeleccionado} onCerrar={() => setInsumoSeleccionado(null)} />

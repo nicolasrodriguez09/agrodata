@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { escucharLotes } from '../lib/lotes';
 import { escucharFincas } from '../lib/fincas';
@@ -12,6 +12,9 @@ import { escucharTodosLosRiegos } from '../lib/riegos';
 import AgregarUsuario from '../components/AgregarUsuario';
 import type { Aplicacion, Ciclo, CompraInsumo, Cosecha, Finca, Jornal, Lote, Riego, Venta } from '../types/models';
 import { IconSearch, IconDroplet, IconBasket, IconWaves, IconTag, IconUsers, IconFileText, IconChevronRight } from '../components/ui/Icons';
+import { formatoFecha } from '../lib/fechas';
+import { usePaginacion } from '../lib/usePaginacion';
+import VerMas from '../components/ui/VerMas';
 
 const COLOR_GASTO = '#b4552f';
 const SUELTO = '__suelto__';
@@ -182,17 +185,28 @@ export default function Admin() {
       ? lotes.filter((l) => l.fincaId === null)
       : lotes.filter((l) => l.fincaId === fincaId);
 
-  const items: Item[] = [
-    ...aplicaciones.map((a) => ({ tipo: 'aplicacion' as const, id: a.id, fecha: a.fecha, data: a })),
-    ...cosechas.map((c) => ({ tipo: 'cosecha' as const, id: c.id, fecha: c.fecha, data: c })),
-    ...riegos.map((r) => ({ tipo: 'riego' as const, id: r.id, fecha: r.fecha, data: r })),
-    ...ventas.map((v) => ({ tipo: 'venta' as const, id: v.id, fecha: v.fecha, data: v })),
-    ...compras.map((c) => ({ tipo: 'compra' as const, id: c.id, fecha: c.fecha, data: c })),
-    ...jornales.map((j) => ({ tipo: 'jornal' as const, id: j.id, fecha: j.fecha, data: j })),
-  ].sort((a, b) => b.fecha.localeCompare(a.fecha));
+  // Fusionar y ordenar los 6 tipos es lo mas caro de la pagina: sin memoizar
+  // se rehacia entero en cada tecla del buscador.
+  const items: Item[] = useMemo(
+    () =>
+      [
+        ...aplicaciones.map((a) => ({ tipo: 'aplicacion' as const, id: a.id, fecha: a.fecha, data: a })),
+        ...cosechas.map((c) => ({ tipo: 'cosecha' as const, id: c.id, fecha: c.fecha, data: c })),
+        ...riegos.map((r) => ({ tipo: 'riego' as const, id: r.id, fecha: r.fecha, data: r })),
+        ...ventas.map((v) => ({ tipo: 'venta' as const, id: v.id, fecha: v.fecha, data: v })),
+        ...compras.map((c) => ({ tipo: 'compra' as const, id: c.id, fecha: c.fecha, data: c })),
+        ...jornales.map((j) => ({ tipo: 'jornal' as const, id: j.id, fecha: j.fecha, data: j })),
+      ].sort((a, b) => b.fecha.localeCompare(a.fecha)),
+    [aplicaciones, cosechas, riegos, ventas, compras, jornales],
+  );
+
+  // Antes cada fila hacia lotes.find(): O(filas x lotes) en cada render.
+  const lotePorId = useMemo(() => new Map(lotes.map((l) => [l.id, l])), [lotes]);
 
   const textoNorm = texto.trim().toLowerCase();
-  const itemsFiltrados = items.filter((item) => {
+  const itemsFiltrados = useMemo(
+    () =>
+      items.filter((item) => {
     if (tipo !== 'todo' && item.tipo !== tipo) return false;
     if (desde && item.fecha < desde) return false;
     if (hasta && item.fecha > hasta) return false;
@@ -208,8 +222,15 @@ export default function Admin() {
     if (cicloId && cicloIdDe(item) !== cicloId) return false;
 
     if (!textoNorm) return true;
-    return camposDeTexto(item).some((c) => c?.toLowerCase().includes(textoNorm));
-  });
+        return camposDeTexto(item).some((c) => c?.toLowerCase().includes(textoNorm));
+      }),
+    [items, tipo, desde, hasta, loteId, fincaId, cicloId, textoNorm, lotes],
+  );
+
+  const pagina = usePaginacion(
+    itemsFiltrados,
+    `${tipo}|${desde}|${hasta}|${loteId}|${fincaId}|${cicloId}|${textoNorm}`,
+  );
 
   const hayFiltrosActivos = !!fincaId || !!loteId || !!cicloId || !!desde || !!hasta || tipo !== 'todo' || !!textoNorm;
 
@@ -223,7 +244,7 @@ export default function Admin() {
         Panel
       </h1>
       <p className="mb-5 text-sm" style={{ color: 'var(--text-dim)' }}>
-        Buscá cualquier registro de toda la finca desde acá, sin entrar lote por lote.
+        Busca cualquier registro de toda la finca desde aquí, sin entrar lote por lote.
       </p>
 
       <Link
@@ -375,12 +396,12 @@ export default function Admin() {
         </p>
       ) : (
         <div className="flex flex-col gap-2">
-          {itemsFiltrados.map((item) => {
+          {pagina.visibles.map((item) => {
             const estilo = ESTILO_TIPO[item.tipo]!;
             const Icon = estilo.Icon;
             const monto = montoDe(item);
             const itemLoteId = loteIdDe(item);
-            const lote = itemLoteId ? lotes.find((l) => l.id === itemLoteId) : undefined;
+            const lote = itemLoteId ? lotePorId.get(itemLoteId) : undefined;
             return (
               <div
                 key={`${item.tipo}-${item.id}`}
@@ -399,7 +420,7 @@ export default function Admin() {
                       {tituloDe(item)}
                     </p>
                     <p className="flex-none text-xs" style={{ color: 'var(--text-dim)' }}>
-                      {item.fecha}
+                      {formatoFecha(item.fecha)}
                     </p>
                   </div>
                   <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
@@ -415,6 +436,14 @@ export default function Admin() {
               </div>
             );
           })}
+          <VerMas
+            mostrando={pagina.mostrando}
+            total={pagina.total}
+            hayMas={pagina.hayMas}
+            onVerMas={pagina.verMas}
+            onVerTodos={pagina.verTodos}
+            etiqueta="registros"
+          />
         </div>
       )}
 
