@@ -244,7 +244,7 @@ export default function Reporte() {
   const label = 'mb-1 block text-xs';
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6" style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+    <div className="reporte-hoja mx-auto max-w-2xl px-4 py-6" style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
       <div className="no-imprimir">
         <Link to="/admin" className="mb-3 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--text-dim)' }}>
           <IconArrowLeft className="h-4 w-4" />
@@ -376,17 +376,17 @@ export default function Reporte() {
         </p>
       ) : (
         <div>
-          <h1 className="font-serif text-2xl font-semibold" style={{ color: 'var(--text)' }}>
+          <h1 className="reporte-titulo font-serif text-2xl font-semibold" style={{ color: 'var(--text)' }}>
             AgroData — Reporte consolidado
           </h1>
-          <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+          <p className="reporte-alcance text-sm font-medium" style={{ color: 'var(--text)' }}>
             {alcance}
           </p>
           <p className="mb-4 text-xs" style={{ color: 'var(--text-dim)' }}>
             Generado el {generadoEl}
           </p>
 
-          <div className="mb-5 grid grid-cols-2 gap-2">
+          <div className="reporte-resumen mb-5 grid grid-cols-2 gap-2">
             <div className="rounded-xl border p-3 text-center" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
               <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
                 Vendido
@@ -455,7 +455,7 @@ export default function Reporte() {
             <>
               {aplicaciones.length > 0 && (
                 <>
-                  <h2 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+                  <h2 className="reporte-seccion font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
                     Aplicaciones ({aplicaciones.length})
                   </h2>
                   <div className="mb-5 flex flex-col gap-2">
@@ -474,7 +474,7 @@ export default function Reporte() {
 
               {cosechas.length > 0 && (
                 <>
-                  <h2 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+                  <h2 className="reporte-seccion font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
                     Cosechas ({cosechas.length})
                   </h2>
                   <div className="mb-5 flex flex-col gap-2">
@@ -493,7 +493,7 @@ export default function Reporte() {
 
               {riegos.length > 0 && (
                 <>
-                  <h2 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+                  <h2 className="reporte-seccion font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
                     Riegos ({riegos.length})
                   </h2>
                   <div className="mb-5 flex flex-col gap-2">
@@ -512,7 +512,7 @@ export default function Reporte() {
 
               {ventas.length > 0 && (
                 <>
-                  <h2 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+                  <h2 className="reporte-seccion font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
                     Ventas ({ventas.length})
                   </h2>
                   <div className="mb-5 flex flex-col gap-2">
@@ -531,14 +531,14 @@ export default function Reporte() {
 
               {compras.length > 0 && (
                 <>
-                  <h2 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+                  <h2 className="reporte-seccion font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
                     Compras ({compras.length})
                   </h2>
                   <div className="mb-5 flex flex-col gap-2">
                     {compras.map((c) => (
                       <div
                         key={c.id}
-                        className="reporte-fila rounded-xl border p-3.5"
+                        className="reporte-fila reporte-compra rounded-xl border p-3.5"
                         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -556,12 +556,20 @@ export default function Reporte() {
                           </p>
                         </div>
                         {c.fotoFacturaUrl && (
-                          <img
-                            src={c.fotoFacturaUrl}
-                            alt="Factura"
-                            className="mt-2 max-h-64 rounded-lg object-contain"
-                            style={{ border: '1px solid var(--border)' }}
-                          />
+                          <figure className="m-0">
+                            <img
+                              src={c.fotoFacturaUrl}
+                              alt={`Factura de ${c.producto}`}
+                              className="reporte-factura mt-2 max-h-64 rounded-lg object-contain"
+                              style={{ border: '1px solid var(--border)' }}
+                            />
+                            {/* Rotulada porque en papel las hojas se separan y una foto
+                                suelta no dice de qué compra es. */}
+                            <figcaption className="mt-1 text-xs" style={{ color: 'var(--text-dim)' }}>
+                              Factura · {c.producto} · {formatoFecha(c.fecha)} · $ {c.costo.toLocaleString('es-CO')}
+                              {c.proveedor ? ` · ${c.proveedor}` : ''}
+                            </figcaption>
+                          </figure>
                         )}
                       </div>
                     ))}
@@ -571,7 +579,7 @@ export default function Reporte() {
 
               {jornales.length > 0 && (
                 <>
-                  <h2 className="font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+                  <h2 className="reporte-seccion font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
                     Jornales ({jornales.length})
                   </h2>
                   <div className="mb-5 flex flex-col gap-2">
@@ -587,6 +595,25 @@ export default function Reporte() {
                   </div>
                 </>
               )}
+
+              {/* Cierre del documento impreso: deja explícito de dónde salieron
+                  los números y da el espacio de firma que suele pedir un banco. */}
+              <div className="solo-imprimir" style={{ marginTop: '18pt', borderTop: '1px solid var(--border)', paddingTop: '8pt' }}>
+                <p style={{ fontSize: '8.5pt', color: 'var(--text-dim)', margin: 0 }}>
+                  Generado por AgroData el {generadoEl} a partir de los registros de la finca.{' '}
+                  {modo === 'ciclo'
+                    ? 'El invertido de este lote son los insumos aplicados más los jornales marcados con él.'
+                    : 'El invertido del período son las compras más los jornales; las aplicaciones no se suman aparte para no contar dos veces el mismo insumo.'}
+                </p>
+                <div style={{ display: 'flex', gap: '24pt', marginTop: '28pt' }}>
+                  <div style={{ flex: 1, borderTop: '1px solid var(--text)', paddingTop: '4pt', fontSize: '8.5pt', color: 'var(--text-dim)' }}>
+                    Responsable de la finca
+                  </div>
+                  <div style={{ flex: 1, borderTop: '1px solid var(--text)', paddingTop: '4pt', fontSize: '8.5pt', color: 'var(--text-dim)' }}>
+                    Fecha y firma
+                  </div>
+                </div>
+              </div>
             </>
           )}
         </div>

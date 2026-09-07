@@ -142,7 +142,67 @@ body {
   body {
     background: #fff !important;
   }
-  .reporte-fila {
+
+  /* Por defecto el navegador no imprime fondos, y sin ellos los cuadritos de
+     color de cada tipo de registro y el recuadro del balance salen en blanco.
+     Como los tokens de arriba ya dejan la página en blanco, forzar el color
+     exacto solo afecta a esos acentos pequeños: no gasta tinta de más. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* En pantalla el reporte va angosto como una app de celular; en A4 eso
+     desperdiciaría media hoja. */
+  .reporte-hoja {
+    max-width: none !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+
+  /* Tamaños en pt: los px de pantalla se imprimen inconsistentes entre navegadores. */
+  .reporte-hoja {
+    font-size: 10pt;
+  }
+  .reporte-titulo {
+    font-size: 19pt;
+    line-height: 1.15;
+  }
+  .reporte-alcance {
+    font-size: 11.5pt;
+  }
+  .reporte-seccion {
+    font-size: 10pt;
+    /* Que un título no quede solo al final de una página, con su lista en la siguiente. */
+    break-after: avoid;
+    break-inside: avoid;
+    margin-top: 14pt;
+  }
+  .reporte-fila,
+  .reporte-resumen {
     break-inside: avoid;
   }
+
+  /* La factura es el respaldo que pide el banco: en papel tiene que verse,
+     no salir en miniatura como en el celular. */
+  .reporte-factura {
+    max-height: 11cm !important;
+    max-width: 100%;
+    width: auto;
+    break-inside: avoid;
+    margin-top: 6pt;
+  }
+  .reporte-compra {
+    break-inside: avoid;
+  }
+
+  /* Pie del documento, solo en papel. */
+  .solo-imprimir {
+    display: block !important;
+  }
+}
+
+/* Solo aparece al imprimir; en pantalla estorba. */
+.solo-imprimir {
+  display: none;
 }

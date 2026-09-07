@@ -240,6 +240,7 @@ for (const lote of LOTES) {
         cicloId,
         insumoId: p.insumo,
         cantidad,
+        dosisHa: p.dosisHa,
         responsable: p.resp,
       });
     }
@@ -427,7 +428,7 @@ for (const ev of eventos) {
     cantidad: ev.cantidad,
     unidad: ins.unidad,
     costoEstimado: Math.round(ev.cantidad * unitario),
-    dosis: `${(ev.cantidad / 1).toFixed(1)} ${ins.unidad}`,
+    dosis: `${ev.dosisHa} ${ins.unidad}/ha`,
     fecha: ev.fecha,
     responsable: ev.responsable,
     creadoPor: UID,
