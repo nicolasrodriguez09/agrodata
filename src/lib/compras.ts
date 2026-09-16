@@ -1,7 +1,8 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from 'firebase/firestore';
+import { collection, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from 'firebase/firestore';
 import { db } from './firebase';
 import { registrarEntrada, ajustarStock, recalcularCostoUnitario } from './insumos';
 import type { CompraInsumo } from '../types/models';
+import { escribir } from './escrituraOffline';
 
 export function escucharCompras(callback: (compras: CompraInsumo[]) => void) {
   const q = query(collection(db, 'compras'));
@@ -24,7 +25,11 @@ export interface DatosCompra {
 }
 
 export async function crearCompra(data: DatosCompra): Promise<string> {
-  const ref = await addDoc(collection(db, 'compras'), {
+  // doc() sin argumento genera el ID en el teléfono, sin pedirle nada al
+  // servidor. Así se puede seguir (asociar la foto, cargar el inventario)
+  // aunque no haya señal.
+  const ref = doc(collection(db, 'compras'));
+  escribir(setDoc(ref, {
     insumoId: data.insumoId,
     producto: data.producto.trim(),
     cantidad: data.cantidad,
@@ -34,8 +39,8 @@ export async function crearCompra(data: DatosCompra): Promise<string> {
     personaQueCompro: data.personaQueCompro.trim(),
     fotoFacturaUrl: null,
     creadoPor: data.creadoPor,
-  });
-  await registrarEntrada({
+  }));
+  registrarEntrada({
     insumoId: data.insumoId,
     cantidad: data.cantidad,
     costoUnitario: data.costo / data.cantidad,
@@ -70,14 +75,14 @@ export async function actualizarCompra(
     });
   }
 
-  await updateDoc(doc(db, 'compras', compraExistente.id), {
+  escribir(updateDoc(doc(db, 'compras', compraExistente.id), {
     producto: data.producto.trim(),
     cantidad: data.cantidad,
     costo: data.costo,
     fecha: data.fecha,
     proveedor: data.proveedor?.trim() || null,
     personaQueCompro: data.personaQueCompro.trim(),
-  });
+  }));
 
   if (compraExistente.insumoId) await recalcularCostoUnitario(compraExistente.insumoId);
 }
@@ -98,6 +103,6 @@ export async function borrarCompra(compra: CompraInsumo) {
       creadoPor: compra.creadoPor,
     });
   }
-  await deleteDoc(doc(db, 'compras', compra.id));
+  escribir(deleteDoc(doc(db, 'compras', compra.id)));
   if (compra.insumoId) await recalcularCostoUnitario(compra.insumoId);
 }

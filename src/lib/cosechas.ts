@@ -1,6 +1,7 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Cosecha } from '../types/models';
+import { escribir } from './escrituraOffline';
 
 export function escucharCosechasDeCiclo(cicloId: string, callback: (cosechas: Cosecha[]) => void) {
   const q = query(collection(db, 'cosechas'), where('cicloId', '==', cicloId));
@@ -28,27 +29,27 @@ export interface DatosCosecha {
 }
 
 export async function crearCosecha(data: DatosCosecha) {
-  await addDoc(collection(db, 'cosechas'), {
+  escribir(addDoc(collection(db, 'cosechas'), {
     loteId: data.loteId,
     cicloId: data.cicloId,
     fecha: data.fecha,
     cantidad: data.cantidad.trim(),
     calidad: data.calidad || null,
     creadoPor: data.creadoPor,
-  });
+  }));
 }
 
 export async function actualizarCosecha(
   id: string,
   data: Pick<DatosCosecha, 'fecha' | 'cantidad' | 'calidad'>,
 ) {
-  await updateDoc(doc(db, 'cosechas', id), {
+  escribir(updateDoc(doc(db, 'cosechas', id), {
     fecha: data.fecha,
     cantidad: data.cantidad.trim(),
     calidad: data.calidad || null,
-  });
+  }));
 }
 
 export async function borrarCosecha(id: string) {
-  await deleteDoc(doc(db, 'cosechas', id));
+  escribir(deleteDoc(doc(db, 'cosechas', id)));
 }

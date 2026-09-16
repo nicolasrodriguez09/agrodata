@@ -1,8 +1,9 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDoc, getDocs, increment, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, addDoc, setDoc, updateDoc, deleteDoc, doc, getDoc, getDocs, increment, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { ErrorDeNegocio } from './errores';
 import { formatoCantidad } from './cantidades';
 import type { InsumoInventario, MovimientoInventario } from '../types/models';
+import { escribir } from './escrituraOffline';
 
 /** Margen para que la coma flotante no dispare el bloqueo (0.1 - 0.1 puede dar -1e-17). */
 const TOLERANCIA = 0.001;
@@ -42,13 +43,14 @@ export function escucharMovimientosDeInsumo(insumoId: string, callback: (movimie
 }
 
 export async function crearInsumo(nombre: string, unidad: string, creadoPor: string): Promise<string> {
-  const ref = await addDoc(collection(db, 'insumos'), {
+  const ref = doc(collection(db, 'insumos'));
+  escribir(setDoc(ref, {
     nombre: nombre.trim(),
     unidad: unidad.trim(),
     stockActual: 0,
     costoUnitario: 0,
     creadoPor,
-  });
+  }));
   return ref.id;
 }
 
@@ -63,11 +65,11 @@ interface DatosEntrada {
 
 /** Entrada de stock por una compra. Sobreescribe costoUnitario (último precio, ver types/models.ts). */
 export async function registrarEntrada(data: DatosEntrada) {
-  await updateDoc(doc(db, 'insumos', data.insumoId), {
+  escribir(updateDoc(doc(db, 'insumos', data.insumoId), {
     stockActual: increment(data.cantidad),
     costoUnitario: data.costoUnitario,
-  });
-  await addDoc(collection(db, 'movimientos'), {
+  }));
+  escribir(addDoc(collection(db, 'movimientos'), {
     insumoId: data.insumoId,
     tipo: 'entrada' as const,
     cantidad: data.cantidad,
@@ -76,7 +78,7 @@ export async function registrarEntrada(data: DatosEntrada) {
     origen: 'compra' as const,
     origenId: data.compraId,
     creadoPor: data.creadoPor,
-  });
+  }));
 }
 
 interface DatosSalida {
@@ -91,10 +93,10 @@ interface DatosSalida {
 
 /** Salida de stock por una aplicación. No bloquea si deja el stock en negativo. */
 export async function registrarSalida(data: DatosSalida) {
-  await updateDoc(doc(db, 'insumos', data.insumoId), {
+  escribir(updateDoc(doc(db, 'insumos', data.insumoId), {
     stockActual: increment(-data.cantidad),
-  });
-  await addDoc(collection(db, 'movimientos'), {
+  }));
+  escribir(addDoc(collection(db, 'movimientos'), {
     insumoId: data.insumoId,
     tipo: 'salida' as const,
     cantidad: data.cantidad,
@@ -104,7 +106,7 @@ export async function registrarSalida(data: DatosSalida) {
     origenId: data.aplicacionId,
     loteId: data.loteId,
     creadoPor: data.creadoPor,
-  });
+  }));
 }
 
 interface DatosAjuste {
@@ -122,10 +124,10 @@ interface DatosAjuste {
  * (si no, la salida vieja se queda "colgada" en el historial sin su reversión).
  */
 export async function revertirSalida(data: DatosAjuste) {
-  await updateDoc(doc(db, 'insumos', data.insumoId), {
+  escribir(updateDoc(doc(db, 'insumos', data.insumoId), {
     stockActual: increment(data.cantidad),
-  });
-  await addDoc(collection(db, 'movimientos'), {
+  }));
+  escribir(addDoc(collection(db, 'movimientos'), {
     insumoId: data.insumoId,
     tipo: 'entrada' as const,
     cantidad: data.cantidad,
@@ -134,7 +136,7 @@ export async function revertirSalida(data: DatosAjuste) {
     origen: 'ajuste' as const,
     origenId: data.aplicacionId,
     creadoPor: data.creadoPor,
-  });
+  }));
 }
 
 /**
@@ -165,10 +167,10 @@ export async function ajustarStock(data: {
     }
   }
 
-  await updateDoc(doc(db, 'insumos', data.insumoId), {
+  escribir(updateDoc(doc(db, 'insumos', data.insumoId), {
     stockActual: increment(data.delta),
-  });
-  await addDoc(collection(db, 'movimientos'), {
+  }));
+  escribir(addDoc(collection(db, 'movimientos'), {
     insumoId: data.insumoId,
     tipo: data.delta > 0 ? ('entrada' as const) : ('salida' as const),
     cantidad: Math.abs(data.delta),
@@ -177,7 +179,7 @@ export async function ajustarStock(data: {
     origen: 'ajuste' as const,
     origenId: data.origenId,
     creadoPor: data.creadoPor,
-  });
+  }));
 }
 
 /**
@@ -192,9 +194,9 @@ export async function recalcularCostoUnitario(insumoId: string) {
     .filter((c) => (c.cantidad ?? 0) > 0)
     .sort((a, b) => b.fecha.localeCompare(a.fecha));
   const masReciente = compras[0];
-  await updateDoc(doc(db, 'insumos', insumoId), {
+  escribir(updateDoc(doc(db, 'insumos', insumoId), {
     costoUnitario: masReciente ? masReciente.costo / (masReciente.cantidad ?? 1) : 0,
-  });
+  }));
 }
 
 /** Solo deja borrar un insumo si no tiene movimientos, para no dejar historial huérfano. */
@@ -203,12 +205,12 @@ export async function borrarInsumo(id: string) {
   if (!movimientos.empty) {
     throw new Error('NO_SE_PUEDE_BORRAR_TIENE_MOVIMIENTOS');
   }
-  await deleteDoc(doc(db, 'insumos', id));
+  escribir(deleteDoc(doc(db, 'insumos', id)));
 }
 
 export async function actualizarInsumo(id: string, nombre: string, unidad: string) {
-  await updateDoc(doc(db, 'insumos', id), {
+  escribir(updateDoc(doc(db, 'insumos', id), {
     nombre: nombre.trim(),
     unidad: unidad.trim(),
-  });
+  }));
 }

@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Finca } from '../types/models';
+import { escribir } from './escrituraOffline';
 
 const coleccion = collection(db, 'fincas');
 
@@ -23,17 +24,17 @@ export function escucharFincas(callback: (fincas: Finca[]) => void) {
 }
 
 export async function crearFinca(data: { nombre: string; ubicacion?: string }) {
-  await addDoc(coleccion, {
+  escribir(addDoc(coleccion, {
     nombre: data.nombre.trim(),
     ubicacion: data.ubicacion?.trim() || '',
-  });
+  }));
 }
 
 export async function actualizarFinca(id: string, data: { nombre: string; ubicacion?: string }) {
-  await updateDoc(doc(db, 'fincas', id), {
+  escribir(updateDoc(doc(db, 'fincas', id), {
     nombre: data.nombre.trim(),
     ubicacion: data.ubicacion?.trim() || '',
-  });
+  }));
 }
 
 /** Lanza un error si la finca todavía tiene lotes asociados. */
@@ -42,5 +43,5 @@ export async function borrarFinca(id: string) {
   if (!lotesDeLaFinca.empty) {
     throw new Error('NO_SE_PUEDE_BORRAR_TIENE_LOTES');
   }
-  await deleteDoc(doc(db, 'fincas', id));
+  escribir(deleteDoc(doc(db, 'fincas', id)));
 }

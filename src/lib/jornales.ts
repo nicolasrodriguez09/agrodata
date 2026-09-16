@@ -1,6 +1,7 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Jornal } from '../types/models';
+import { escribir } from './escrituraOffline';
 
 export function escucharJornales(callback: (jornales: Jornal[]) => void) {
   const q = query(collection(db, 'jornales'));
@@ -25,7 +26,7 @@ export interface DatosJornal {
 }
 
 export async function crearJornal(data: DatosJornal) {
-  await addDoc(collection(db, 'jornales'), {
+  escribir(addDoc(collection(db, 'jornales'), {
     loteId: data.loteId || null,
     trabajador: data.trabajador.trim(),
     quienPago: data.quienPago.trim(),
@@ -37,14 +38,14 @@ export async function crearJornal(data: DatosJornal) {
     valor: data.cantidad * data.tarifa,
     pagado: data.pagado,
     creadoPor: data.creadoPor,
-  });
+  }));
 }
 
 export async function actualizarJornal(
   id: string,
   data: Omit<DatosJornal, 'creadoPor'>,
 ) {
-  await updateDoc(doc(db, 'jornales', id), {
+  escribir(updateDoc(doc(db, 'jornales', id), {
     loteId: data.loteId || null,
     trabajador: data.trabajador.trim(),
     quienPago: data.quienPago.trim(),
@@ -55,9 +56,9 @@ export async function actualizarJornal(
     tarifa: data.tarifa,
     valor: data.cantidad * data.tarifa,
     pagado: data.pagado,
-  });
+  }));
 }
 
 export async function borrarJornal(id: string) {
-  await deleteDoc(doc(db, 'jornales', id));
+  escribir(deleteDoc(doc(db, 'jornales', id)));
 }

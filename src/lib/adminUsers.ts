@@ -2,6 +2,7 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { app, db } from './firebase';
+import { escribir } from './escrituraOffline';
 
 /**
  * Crea un usuario nuevo sin cerrar la sesión del admin actual.
@@ -22,11 +23,11 @@ export async function crearUsuario(email: string, password: string, nombre?: str
     await signOut(secondaryAuth);
     // Se escribe desde la sesión del admin (db), no desde la secundaria: las
     // reglas solo dejan sumar a alguien si quien lo suma ya está adentro.
-    await setDoc(doc(db, 'usuarios', uid), {
+    escribir(setDoc(doc(db, 'usuarios', uid), {
       uid,
       email: email.trim(),
       nombre: nombre?.trim() || email.trim().split('@')[0],
-    });
+    }));
   } finally {
     await deleteApp(secondaryApp);
   }

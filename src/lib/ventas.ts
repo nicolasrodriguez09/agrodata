@@ -1,6 +1,7 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Venta } from '../types/models';
+import { escribir } from './escrituraOffline';
 
 export function escucharVentasDeCiclo(cicloId: string, callback: (ventas: Venta[]) => void) {
   const q = query(collection(db, 'ventas'), where('cicloId', '==', cicloId));
@@ -30,7 +31,7 @@ export interface DatosVenta {
 }
 
 export async function crearVenta(data: DatosVenta) {
-  await addDoc(collection(db, 'ventas'), {
+  escribir(addDoc(collection(db, 'ventas'), {
     loteId: data.loteId,
     cicloId: data.cicloId,
     fecha: data.fecha,
@@ -39,22 +40,22 @@ export async function crearVenta(data: DatosVenta) {
     comprador: data.comprador?.trim() || null,
     cobrado: data.cobrado,
     creadoPor: data.creadoPor,
-  });
+  }));
 }
 
 export async function actualizarVenta(
   id: string,
   data: Pick<DatosVenta, 'fecha' | 'cantidad' | 'precio' | 'comprador' | 'cobrado'>,
 ) {
-  await updateDoc(doc(db, 'ventas', id), {
+  escribir(updateDoc(doc(db, 'ventas', id), {
     fecha: data.fecha,
     cantidad: data.cantidad.trim(),
     precio: data.precio,
     comprador: data.comprador?.trim() || null,
     cobrado: data.cobrado,
-  });
+  }));
 }
 
 export async function borrarVenta(id: string) {
-  await deleteDoc(doc(db, 'ventas', id));
+  escribir(deleteDoc(doc(db, 'ventas', id)));
 }

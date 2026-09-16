@@ -1,7 +1,8 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { registrarSalida, revertirSalida } from './insumos';
 import type { Aplicacion } from '../types/models';
+import { escribir } from './escrituraOffline';
 
 export function formatoCantidadAplicacion(a: Aplicacion) {
   if (typeof a.cantidad === 'number') return `${a.cantidad}${a.unidad ? ` ${a.unidad}` : ''}`;
@@ -54,7 +55,10 @@ export interface DatosAplicacion {
 
 export async function crearAplicacion(data: DatosAplicacion) {
   const costoEstimado = data.cantidad * data.costoUnitario;
-  const ref = await addDoc(collection(db, 'aplicaciones'), {
+  // ID generado en el teléfono: registrarSalida lo necesita y no puede esperar
+  // la confirmación del servidor, que sin señal no llega nunca.
+  const ref = doc(collection(db, 'aplicaciones'));
+  escribir(setDoc(ref, {
     loteId: data.loteId,
     cicloId: data.cicloId,
     insumoId: data.insumoId,
@@ -66,8 +70,8 @@ export async function crearAplicacion(data: DatosAplicacion) {
     fecha: data.fecha,
     responsable: data.responsable.trim(),
     creadoPor: data.creadoPor,
-  });
-  await registrarSalida({
+  }));
+  registrarSalida({
     insumoId: data.insumoId,
     cantidad: data.cantidad,
     costoUnitario: data.costoUnitario,
@@ -83,7 +87,7 @@ export async function actualizarAplicacion(
   data: Pick<DatosAplicacion, 'insumoId' | 'producto' | 'dosis' | 'cantidad' | 'unidad' | 'costoUnitario' | 'fecha' | 'responsable'>,
 ) {
   const costoEstimado = data.cantidad * data.costoUnitario;
-  await updateDoc(doc(db, 'aplicaciones', aplicacionExistente.id), {
+  escribir(updateDoc(doc(db, 'aplicaciones', aplicacionExistente.id), {
     insumoId: data.insumoId,
     producto: data.producto.trim(),
     dosis: data.dosis?.trim() || null,
@@ -92,7 +96,7 @@ export async function actualizarAplicacion(
     costoEstimado,
     fecha: data.fecha,
     responsable: data.responsable.trim(),
-  });
+  }));
 
   // Si cambió el insumo o la cantidad aplicada, hay que ajustar el stock:
   // devolver lo que se había descontado antes y descontar lo nuevo.
@@ -111,7 +115,7 @@ export async function actualizarAplicacion(
       creadoPor: aplicacionExistente.creadoPor,
     });
   }
-  await registrarSalida({
+  registrarSalida({
     insumoId: data.insumoId,
     cantidad: data.cantidad,
     costoUnitario: data.costoUnitario,
@@ -135,5 +139,5 @@ export async function borrarAplicacion(aplicacion: Aplicacion) {
       creadoPor: aplicacion.creadoPor,
     });
   }
-  await deleteDoc(doc(db, 'aplicaciones', aplicacion.id));
+  escribir(deleteDoc(doc(db, 'aplicaciones', aplicacion.id)));
 }

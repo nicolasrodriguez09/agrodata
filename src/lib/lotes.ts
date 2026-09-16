@@ -1,6 +1,7 @@
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDoc, orderBy, query } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Lote } from '../types/models';
+import { escribir } from './escrituraOffline';
 
 const coleccion = collection(db, 'lotes');
 
@@ -41,13 +42,13 @@ function limpiar(data: DatosLote) {
 }
 
 export async function crearLote(data: DatosLote) {
-  await addDoc(coleccion, { ...limpiar(data), cicloActivoId: null });
+  escribir(addDoc(coleccion, { ...limpiar(data), cicloActivoId: null }));
 }
 
 export async function actualizarLote(id: string, data: DatosLote) {
-  await updateDoc(doc(db, 'lotes', id), limpiar(data));
+  escribir(updateDoc(doc(db, 'lotes', id), limpiar(data)));
 }
 
 export async function borrarLote(id: string) {
-  await deleteDoc(doc(db, 'lotes', id));
+  escribir(deleteDoc(doc(db, 'lotes', id)));
 }
