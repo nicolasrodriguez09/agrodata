@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'AgroData - Freddy Reyes',
         short_name: 'AgroData',
         description: 'Registro de lotes, aplicaciones, cosechas y finanzas agrícolas',
-        theme_color: '#166534',
-        background_color: '#ffffff',
+        theme_color: '#16221a',
+        background_color: '#16221a',
         display: 'standalone',
         start_url: '/',
         icons: [
@@ -29,6 +29,14 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
+          },
+          {
+            // Android recorta el ícono con su propia máscara (círculo, gota,
+            // etc.); 'maskable' le dice que puede hacerlo sin comerse el dibujo.
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },
