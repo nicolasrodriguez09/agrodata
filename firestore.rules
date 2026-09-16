@@ -1,9 +1,49 @@
 rules_version = '2';
 
+// Reglas de acceso a la base de la finca.
+//
+// Antes decían `if request.auth != null`, o sea "cualquiera que esté logueado".
+// Eso no alcanzaba: el registro por correo está abierto en el proyecto y la
+// API key va dentro del JavaScript público, así que cualquiera en internet
+// podía crearse una cuenta contra la API de Firebase — sin pasar por la app —
+// y con eso leer, editar y borrar toda la contabilidad.
+//
+// Ahora no manda el login sino la lista: hay que existir en /usuarios.
+// La app tiene su propia comprobación para mostrar un mensaje claro, pero
+// quien de verdad bloquea es este archivo.
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    function esDeLaFinca() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
     }
+
+    // La lista de gente autorizada.
+    // Solo alguien que YA está adentro puede sumar a otro: quien se registró
+    // por su cuenta no está en la lista, así que no puede agregarse a sí mismo.
+    // Modificar y borrar quedan cerrados a propósito — se hacen desde la
+    // consola de Firebase, para que un error en la app no deje a nadie por fuera.
+    match /usuarios/{uid} {
+      allow read: if esDeLaFinca();
+      allow create: if esDeLaFinca();
+      allow update, delete: if false;
+    }
+
+    // El resto de las colecciones. Se listan una por una en vez de usar
+    // {document=**}: el comodín también cubriría /usuarios y, como en Firestore
+    // basta que UNA regla permita, le daría el update/delete que arriba se negó.
+    match /fincas/{id}       { allow read, write: if esDeLaFinca(); }
+    match /lotes/{id}        { allow read, write: if esDeLaFinca(); }
+    match /ciclos/{id}       { allow read, write: if esDeLaFinca(); }
+    match /aplicaciones/{id} { allow read, write: if esDeLaFinca(); }
+    match /cosechas/{id}     { allow read, write: if esDeLaFinca(); }
+    match /riegos/{id}       { allow read, write: if esDeLaFinca(); }
+    match /ventas/{id}       { allow read, write: if esDeLaFinca(); }
+    match /compras/{id}      { allow read, write: if esDeLaFinca(); }
+    match /jornales/{id}     { allow read, write: if esDeLaFinca(); }
+    match /insumos/{id}      { allow read, write: if esDeLaFinca(); }
+    match /movimientos/{id}  { allow read, write: if esDeLaFinca(); }
   }
 }

@@ -80,7 +80,7 @@ export default function Fincas() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--text-dim)' }}>
+      <Link to="/" className="-ml-2 mb-1 inline-flex h-11 items-center gap-1 px-2 text-sm" style={{ color: 'var(--text-dim)' }}>
         <IconArrowLeft className="h-4 w-4" />
         Mis lotes
       </Link>

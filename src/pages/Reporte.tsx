@@ -246,7 +246,7 @@ export default function Reporte() {
   return (
     <div className="reporte-hoja mx-auto max-w-2xl px-4 py-6" style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
       <div className="no-imprimir">
-        <Link to="/admin" className="mb-3 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--text-dim)' }}>
+        <Link to="/admin" className="-ml-2 mb-1 inline-flex h-11 items-center gap-1 px-2 text-sm" style={{ color: 'var(--text-dim)' }}>
           <IconArrowLeft className="h-4 w-4" />
           Volver al Panel
         </Link>

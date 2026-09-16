@@ -66,7 +66,7 @@ export default function EstadoSincronizacion() {
       <button
         onClick={() => setExplicacion(true)}
         aria-label={`Estado: ${estado.texto}. Toca para saber más`}
-        className="flex items-center gap-1.5 rounded-full bg-white/10 py-1 pr-2.5 pl-2 text-xs font-medium"
+        className="flex h-11 items-center gap-1.5 rounded-full bg-white/10 pr-3 pl-2.5 text-xs font-medium"
       >
         <span className="relative flex h-2 w-2 flex-none">
           {estado.pulso && (
@@ -77,7 +77,7 @@ export default function EstadoSincronizacion() {
           )}
           <span className="relative inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: estado.color }} />
         </span>
-        <span className="hidden opacity-90 min-[380px]:inline">{estado.texto}</span>
+        <span className="opacity-90">{estado.texto}</span>
       </button>
 
       <InfoDialog

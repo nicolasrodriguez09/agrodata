@@ -26,8 +26,8 @@ import {
   IconTag,
   IconWaves,
   IconPencil,
-  IconTrash,
   IconSearch,
+  IconFileText,
 } from '../components/ui/Icons';
 
 const acciones = [
@@ -44,7 +44,6 @@ export default function LoteDetalle() {
   const [fincas, setFincas] = useState<Finca[]>([]);
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [editando, setEditando] = useState(false);
-  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [abriendoCiclo, setAbriendoCiclo] = useState(false);
   const [confirmarCierreCiclo, setConfirmarCierreCiclo] = useState(false);
   const [cicloSeleccionadoId, setCicloSeleccionadoId] = useState<string | null>(null);
@@ -143,7 +142,7 @@ export default function LoteDetalle() {
   if (lote === null) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-6">
-        <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--text-dim)' }}>
+        <Link to="/" className="-ml-2 mb-1 inline-flex h-11 items-center gap-1 px-2 text-sm" style={{ color: 'var(--text-dim)' }}>
           <IconArrowLeft className="h-4 w-4" />
           Mis lotes
         </Link>
@@ -175,14 +174,12 @@ export default function LoteDetalle() {
   }
 
   async function handleBorrar() {
-    setConfirmarBorrado(false);
     await borrarLote(lote!.id);
-    navigate('/');
   }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <Link to="/" className="mb-3 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--text-dim)' }}>
+      <Link to="/" className="-ml-2 mb-1 inline-flex h-11 items-center gap-1 px-2 text-sm" style={{ color: 'var(--text-dim)' }}>
         <IconArrowLeft className="h-4 w-4" />
         Mis lotes
       </Link>
@@ -192,43 +189,25 @@ export default function LoteDetalle() {
           <h1 className="font-serif text-2xl font-semibold" style={{ color: 'var(--text)' }}>
             {lote.nombre}
           </h1>
+          {/* Área y árboles en la misma línea, no en dos tarjetas: son datos
+              fijos del lote, no algo que se consulte a cada rato, y ocupaban
+              media pantalla por encima de los botones de registrar. */}
           <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
             {finca ? finca.nombre : 'Lote suelto'} · {lote.cultivo}
+            {lote.areaHectareas != null ? ` · ${lote.areaHectareas} ha` : ''}
+            {lote.cantidadArboles != null ? ` · ${lote.cantidadArboles} árboles` : ''}
           </p>
         </div>
-        <div className="flex flex-none gap-1">
-          <button
-            onClick={() => setEditando(true)}
-            aria-label="Editar lote"
-            className="flex h-9 w-9 items-center justify-center rounded-full"
-            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
-          >
-            <IconPencil className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setConfirmarBorrado(true)}
-            aria-label="Borrar lote"
-            className="flex h-9 w-9 items-center justify-center rounded-full"
-            style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: '#b4552f' }}
-          >
-            <IconTrash className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-xl border p-3.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-          <p style={{ color: 'var(--text-dim)' }}>Área</p>
-          <p className="font-medium" style={{ color: 'var(--text)' }}>
-            {lote.areaHectareas != null ? `${lote.areaHectareas} ha` : '—'}
-          </p>
-        </div>
-        <div className="rounded-xl border p-3.5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-          <p style={{ color: 'var(--text-dim)' }}>Árboles/plantas</p>
-          <p className="font-medium" style={{ color: 'var(--text)' }}>
-            {lote.cantidadArboles != null ? lote.cantidadArboles : '—'}
-          </p>
-        </div>
+        {/* Borrar ya no vive acá: se movió adentro del formulario de editar,
+            porque se lleva el lote entero y estaba al alcance del pulgar. */}
+        <button
+          onClick={() => setEditando(true)}
+          aria-label="Editar lote"
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-full"
+          style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
+        >
+          <IconPencil className="h-4.5 w-4.5" />
+        </button>
       </div>
 
       <div
@@ -249,7 +228,7 @@ export default function LoteDetalle() {
             <select
               value={cicloSeleccionadoId ?? ''}
               onChange={(e) => setCicloSeleccionadoId(e.target.value)}
-              className="rounded-lg border px-2 py-1 text-xs"
+              className="h-11 rounded-xl border px-2.5 text-xs"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
             >
               {ciclos.map((c) => (
@@ -268,7 +247,7 @@ export default function LoteDetalle() {
             </p>
             <button
               onClick={() => setAbriendoCiclo(true)}
-              className="flex-none rounded-lg px-3 py-1.5 text-xs font-medium"
+              className="flex h-11 flex-none items-center rounded-xl px-3.5 text-xs font-medium"
               style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
             >
               Abrir ciclo
@@ -288,7 +267,7 @@ export default function LoteDetalle() {
             </div>
             <button
               onClick={() => setConfirmarCierreCiclo(true)}
-              className="flex-none rounded-lg px-3 py-1.5 text-xs font-medium"
+              className="flex h-11 flex-none items-center rounded-xl px-3.5 text-xs font-medium"
               style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }}
             >
               Cerrar ciclo
@@ -309,7 +288,7 @@ export default function LoteDetalle() {
             {cicloActivo && (
               <button
                 onClick={() => setCicloSeleccionadoId(cicloActivo.id)}
-                className="flex-none rounded-lg px-3 py-1.5 text-xs font-medium"
+                className="flex h-11 flex-none items-center rounded-xl px-3.5 text-xs font-medium"
                 style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
               >
                 Ver ciclo activo
@@ -317,6 +296,32 @@ export default function LoteDetalle() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Registrar es lo que se hace en campo; consultar el resumen se hace
+          despues, en la casa. Por eso las acciones van antes del resumen. */}
+      <h2 className="font-display mt-6 mb-3 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+        Registrar
+      </h2>
+      <div className="grid grid-cols-2 gap-3">
+        {acciones.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => handleClickAccion(id)}
+            className="rounded-xl border p-4 text-left transition hover:brightness-95 active:scale-[0.98]"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
+          >
+            <div
+              className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg"
+              style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
+            >
+              <Icon className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+              {label}
+            </p>
+          </button>
+        ))}
       </div>
 
       {cicloSeleccionado && (
@@ -327,9 +332,10 @@ export default function LoteDetalle() {
             </h2>
             <Link
               to={`/reporte?loteId=${lote.id}&cicloId=${cicloSeleccionado.id}`}
-              className="text-xs font-medium underline underline-offset-2"
-              style={{ color: 'var(--gold)' }}
+              className="flex h-11 flex-none items-center gap-1.5 rounded-xl px-4 text-xs font-semibold"
+              style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
             >
+              <IconFileText className="h-4 w-4" />
               Generar reporte
             </Link>
           </div>
@@ -339,22 +345,6 @@ export default function LoteDetalle() {
             </p>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                  Tamaño
-                </p>
-                <p className="font-medium" style={{ color: 'var(--text)' }}>
-                  {lote.areaHectareas != null ? `${lote.areaHectareas} ha` : '—'}
-                </p>
-              </div>
-              <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
-                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                  Árboles/plantas
-                </p>
-                <p className="font-medium" style={{ color: 'var(--text)' }}>
-                  {lote.cantidadArboles != null ? lote.cantidadArboles : '—'}
-                </p>
-              </div>
               <div className="rounded-xl border p-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
                   Aplicaciones
@@ -417,30 +407,6 @@ export default function LoteDetalle() {
         </>
       )}
 
-      <h2 className="font-display mt-6 mb-3 text-[13px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
-        Acciones
-      </h2>
-      <div className="grid grid-cols-2 gap-3">
-        {acciones.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => handleClickAccion(id)}
-            className="rounded-xl border p-4 text-left transition hover:brightness-95 active:scale-[0.98]"
-            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
-          >
-            <div
-              className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg"
-              style={{ backgroundColor: 'var(--bg)', color: 'var(--gold)' }}
-            >
-              <Icon className="h-4.5 w-4.5" />
-            </div>
-            <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-              {label}
-            </p>
-          </button>
-        ))}
-      </div>
-
       {cicloSeleccionado && (() => {
         const items: Array<
           | { tipo: 'aplicacion'; id: string; fecha: string; data: Aplicacion }
@@ -477,7 +443,7 @@ export default function LoteDetalle() {
                     <button
                       key={v}
                       onClick={() => setVistaHistorial(v)}
-                      className="rounded-full px-2.5 py-1 uppercase transition"
+                      className="flex h-9 items-center rounded-full px-3.5 uppercase transition"
                       style={
                         vistaHistorial === v
                           ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
@@ -504,7 +470,7 @@ export default function LoteDetalle() {
                     <button
                       key={t}
                       onClick={() => setFiltroTipo(t)}
-                      className="rounded-full px-3 py-1.5 text-xs font-medium"
+                      className="flex h-10 items-center rounded-full px-4 text-xs font-medium"
                       style={
                         filtroTipo === t
                           ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
@@ -676,7 +642,15 @@ export default function LoteDetalle() {
         </div>
       )}
 
-      {editando && <FormularioLote fincas={fincas} loteExistente={lote} onCerrar={() => setEditando(false)} />}
+      {editando && (
+        <FormularioLote
+          fincas={fincas}
+          loteExistente={lote}
+          onCerrar={() => setEditando(false)}
+          onBorrar={handleBorrar}
+          onBorrado={() => navigate('/')}
+        />
+      )}
       {abriendoCiclo && <FormularioCiclo loteId={lote.id} onCerrar={() => setAbriendoCiclo(false)} />}
       {mostrarFormAplicacion && cicloActivo && (
         <FormularioAplicacion
@@ -764,15 +738,6 @@ export default function LoteDetalle() {
         onCancel={() => setConfirmarCierreCiclo(false)}
       />
 
-      <ConfirmDialog
-        open={confirmarBorrado}
-        title={`¿Borrar el lote "${lote.nombre}"?`}
-        description="Esta acción no se puede deshacer."
-        confirmLabel="Borrar"
-        danger
-        onConfirm={handleBorrar}
-        onCancel={() => setConfirmarBorrado(false)}
-      />
     </div>
   );
 }

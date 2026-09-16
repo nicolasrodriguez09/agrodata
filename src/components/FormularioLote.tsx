@@ -1,14 +1,19 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { crearLote, actualizarLote } from '../lib/lotes';
 import type { Finca, Lote } from '../types/models';
+import BotonBorrarRegistro from './ui/BotonBorrarRegistro';
 
 interface Props {
   fincas: Finca[];
   loteExistente?: Lote | null;
   onCerrar: () => void;
+  /** Borrar el lote vive acá adentro, no como botón suelto en la pantalla:
+   *  se lleva todo el historial y no debe quedar al alcance del pulgar. */
+  onBorrar?: () => Promise<void>;
+  onBorrado?: () => void;
 }
 
-export default function FormularioLote({ fincas, loteExistente, onCerrar }: Props) {
+export default function FormularioLote({ fincas, loteExistente, onCerrar, onBorrar, onBorrado }: Props) {
   const [nombre, setNombre] = useState('');
   const [fincaId, setFincaId] = useState<string>('');
   const [cultivo, setCultivo] = useState('Guayaba');
@@ -139,6 +144,15 @@ export default function FormularioLote({ fincas, loteExistente, onCerrar }: Prop
             {guardando ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
+
+        {loteExistente && onBorrar && onBorrado && (
+          <BotonBorrarRegistro
+            etiqueta={`el lote "${loteExistente.nombre}"`}
+            descripcion="Se borra el lote y deja de aparecer en la app. Sus ciclos, aplicaciones, cosechas y ventas ya registrados no se borran, pero quedan sin lote al cual pertenecer."
+            onBorrar={onBorrar}
+            onBorrado={onBorrado}
+          />
+        )}
       </form>
     </div>
   );

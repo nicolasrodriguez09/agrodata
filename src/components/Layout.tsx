@@ -29,14 +29,14 @@ export default function Layout() {
           <button
             onClick={alternar}
             aria-label="Cambiar tema"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
             style={{ color: 'var(--gold)' }}
           >
             {tema === 'dark' ? <IconSun className="h-4 w-4" /> : <IconMoon className="h-4 w-4" />}
           </button>
           <button
             onClick={() => logout()}
-            className="ml-1 text-sm font-medium opacity-70 hover:opacity-100"
+            className="ml-1 flex h-11 items-center px-2 text-sm font-medium opacity-70 hover:opacity-100"
           >
             Salir
           </button>

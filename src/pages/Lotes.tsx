@@ -191,14 +191,14 @@ export default function Lotes() {
 
   const lotesSueltos = lotes.filter((l) => l.fincaId === null);
   const totalLotes = lotes.length;
-  const totalFincas = fincas.length + (lotesSueltos.length > 0 ? 1 : 0);
+  const totalFincas = fincas.length;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <div className="mb-2 flex items-center justify-between gap-2">
         <Link
           to="/fincas"
-          className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium"
+          className="flex h-11 items-center gap-1.5 rounded-xl border px-3.5 text-xs font-medium"
           style={{ borderColor: 'var(--border)', color: 'var(--text-dim)', backgroundColor: 'var(--surface)' }}
         >
           <IconMap className="h-3.5 w-3.5" />
@@ -211,7 +211,7 @@ export default function Lotes() {
               <button
                 key={v}
                 onClick={() => setVista(v)}
-                className="rounded-full px-3 py-1.5 uppercase transition"
+                className="flex h-10 items-center rounded-full px-4 uppercase transition"
                 style={
                   vista === v
                     ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
@@ -239,9 +239,42 @@ export default function Lotes() {
       </h1>
       {!cargando && totalLotes > 0 && (
         <p className="mb-5 text-sm" style={{ color: 'var(--text-dim)' }}>
-          <b style={{ color: 'var(--text)' }}>{totalFincas}</b> fincas ·{' '}
-          <b style={{ color: 'var(--text)' }}>{totalLotes}</b> lotes en total
+          <b style={{ color: 'var(--text)' }}>{totalFincas}</b> {totalFincas === 1 ? 'finca' : 'fincas'} ·{' '}
+          <b style={{ color: 'var(--text)' }}>{totalLotes}</b> {totalLotes === 1 ? 'lote' : 'lotes'} en total
+          {lotesSueltos.length > 0 ? `, ${lotesSueltos.length} sin finca` : ''}
         </p>
+      )}
+
+      {/* La leyenda explica el color de las tarjetas, así que va antes de ellas.
+          Estaba al final de la lista: había que pasar los 11 lotes para saber
+          qué significaba el verde oscuro. */}
+      {!cargando && totalLotes > 0 && (
+        <div className="mt-3 mb-1 rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--border)' }}>
+          <p className="font-display mb-1.5 text-[10px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+            Días desde la última aplicación
+          </p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[11px]" style={{ color: 'var(--text-dim)' }}>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--recent)' }} />
+              0–7
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--mid)' }} />
+              8–21
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--dormant)' }} />
+              22+
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className="h-3 w-3 rounded"
+                style={{ backgroundColor: 'var(--nodata)', border: '1px dashed var(--nodata-border)' }}
+              />
+              Sin registrar
+            </span>
+          </div>
+        </div>
       )}
 
       {cargando && <p className="mt-4 text-sm" style={{ color: 'var(--text-dim)' }}>Cargando...</p>}
@@ -290,34 +323,6 @@ export default function Lotes() {
 
       {mostrarForm && <FormularioLote fincas={fincas} onCerrar={() => setMostrarForm(false)} />}
 
-      {totalLotes > 0 && (
-        <div className="mt-2 rounded-2xl border p-4" style={{ borderColor: 'var(--border)' }}>
-          <p className="font-display mb-2 text-[10.5px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
-            Días desde la última aplicación
-          </p>
-          <div className="flex flex-wrap gap-3 text-xs" style={{ color: 'var(--text-dim)' }}>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--recent)' }} />
-              0–7
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--mid)' }} />
-              8–21
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded" style={{ backgroundColor: 'var(--dormant)' }} />
-              22+
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span
-                className="h-3 w-3 rounded"
-                style={{ backgroundColor: 'var(--nodata)', border: '1px dashed var(--nodata-border)' }}
-              />
-              Sin registrar
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
