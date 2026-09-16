@@ -1,8 +1,10 @@
 import type { CompraInsumo } from '../../types/models';
 import { IconTag } from '../ui/Icons';
 import { formatoFecha } from '../../lib/fechas';
+import { useFotoPendiente } from '../../lib/useFotoPendiente';
 
 export default function FilaCompra({ compra, onClick }: { compra: CompraInsumo; onClick: () => void }) {
+  const fotoLocal = useFotoPendiente('compras', compra.id, !!compra.fotoFacturaUrl);
   return (
     <button
       type="button"
@@ -10,8 +12,8 @@ export default function FilaCompra({ compra, onClick }: { compra: CompraInsumo; 
       className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition hover:brightness-95 active:scale-[0.99]"
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
     >
-      {compra.fotoFacturaUrl ? (
-        <img src={compra.fotoFacturaUrl} alt="" className="h-10 w-10 flex-none rounded-lg object-cover" />
+      {compra.fotoFacturaUrl || fotoLocal ? (
+        <img src={compra.fotoFacturaUrl || fotoLocal!} alt="" className="h-10 w-10 flex-none rounded-lg object-cover" />
       ) : (
         <div
           className="flex h-10 w-10 flex-none items-center justify-center rounded-lg"

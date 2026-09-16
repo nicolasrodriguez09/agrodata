@@ -80,3 +80,19 @@ export async function contarFotos(): Promise<number> {
     return 0;
   }
 }
+
+/**
+ * Devuelve la foto que está esperando subir para un documento, si la hay.
+ *
+ * Sirve para poder MOSTRARLA mientras no hay señal: sin esto la pantalla lee
+ * solo el campo de Firestore, que sigue vacío hasta que la foto sube, y le
+ * decía "Sin foto de factura" a alguien que acababa de tomarla.
+ */
+export async function fotoPendienteDe(coleccion: string, docId: string): Promise<Blob | null> {
+  try {
+    const todas = await listarFotos();
+    return todas.find((f) => f.coleccion === coleccion && f.docId === docId)?.archivo ?? null;
+  } catch {
+    return null;
+  }
+}

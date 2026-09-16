@@ -1,6 +1,7 @@
 import type { CompraInsumo } from '../types/models';
 import { IconTag } from './ui/Icons';
 import { formatoFecha } from '../lib/fechas';
+import { useFotoPendiente } from '../lib/useFotoPendiente';
 
 interface Props {
   compra: CompraInsumo;
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export default function DetalleCompra({ compra, onEditar, onCerrar }: Props) {
+  // Si la foto todavía no subió, se muestra la que está guardada en el teléfono.
+  const fotoLocal = useFotoPendiente('compras', compra.id, !!compra.fotoFacturaUrl);
   return (
     <div className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center" onClick={onCerrar}>
       <div
@@ -20,13 +23,20 @@ export default function DetalleCompra({ compra, onEditar, onCerrar }: Props) {
           {compra.producto}
         </h2>
 
-        {compra.fotoFacturaUrl ? (
-          <img
-            src={compra.fotoFacturaUrl}
-            alt="Factura"
-            className="mb-4 w-full rounded-xl object-cover"
-            style={{ border: '1px solid var(--border)', maxHeight: '320px' }}
-          />
+        {compra.fotoFacturaUrl || fotoLocal ? (
+          <div className="mb-4">
+            <img
+              src={compra.fotoFacturaUrl || fotoLocal!}
+              alt="Factura"
+              className="w-full rounded-xl object-cover"
+              style={{ border: '1px solid var(--border)', maxHeight: '320px' }}
+            />
+            {!compra.fotoFacturaUrl && (
+              <p className="mt-1.5 text-xs" style={{ color: 'var(--aviso)' }}>
+                Guardada en el teléfono · se sube sola cuando vuelva el internet
+              </p>
+            )}
+          </div>
         ) : (
           <div
             className="mb-4 flex h-24 items-center justify-center rounded-xl border border-dashed text-sm"

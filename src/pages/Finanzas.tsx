@@ -27,7 +27,7 @@ export default function Finanzas() {
   const [tab, setTab] = useState<Tab>('resumen');
   const [compras, setCompras] = useState<CompraInsumo[]>([]);
   const [mostrarFormCompra, setMostrarFormCompra] = useState(false);
-  const [compraSeleccionada, setCompraSeleccionada] = useState<CompraInsumo | null>(null);
+  const [compraSeleccionadaId, setCompraSeleccionadaId] = useState<string | null>(null);
   const [filtroTextoCompras, setFiltroTextoCompras] = useState('');
   const [fechaDesdeCompras, setFechaDesdeCompras] = useState('');
   const [fechaHastaCompras, setFechaHastaCompras] = useState('');
@@ -63,6 +63,10 @@ export default function Finanzas() {
       setCreandoInsumo(false);
     }
   }
+
+  // Se busca en la lista viva en vez de guardar una copia: así el detalle
+  // refleja los cambios (por ejemplo, la foto de factura cuando termina de subir).
+  const compraSeleccionada = compras.find((c) => c.id === compraSeleccionadaId) ?? null;
 
   const textoCompras = filtroTextoCompras.trim().toLowerCase();
   // Memoizado para no re-filtrar toda la coleccion en cada tecla del buscador.
@@ -374,7 +378,7 @@ export default function Finanzas() {
             ) : (
               <div className="flex flex-col gap-2">
                 {paginaCompras.visibles.map((c) => (
-                  <FilaCompra key={c.id} compra={c} onClick={() => setCompraSeleccionada(c)} />
+                  <FilaCompra key={c.id} compra={c} onClick={() => setCompraSeleccionadaId(c.id)} />
                 ))}
                 <VerMas
                   mostrando={paginaCompras.mostrando}
@@ -506,9 +510,9 @@ export default function Finanzas() {
           compra={compraSeleccionada}
           onEditar={() => {
             setEditandoCompra(compraSeleccionada);
-            setCompraSeleccionada(null);
+            setCompraSeleccionadaId(null);
           }}
-          onCerrar={() => setCompraSeleccionada(null)}
+          onCerrar={() => setCompraSeleccionadaId(null)}
         />
       )}
       {editandoCompra && (
