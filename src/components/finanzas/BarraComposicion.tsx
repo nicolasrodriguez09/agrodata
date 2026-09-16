@@ -39,12 +39,17 @@ export default function BarraComposicion({
           </button>
         )}
       </div>
-      <div className="mb-3 flex h-3 overflow-hidden rounded-full" style={{ backgroundColor: 'var(--nodata)' }}>
+      {/* Barra delgada, no un bloque grueso saturado: los bloques gordos gritan
+          y hacen ver de juguete un dato serio. El separador entre segmentos es
+          un hueco de 2px del color de la superficie, no un borde — el borde
+          agrega tinta que no es dato. */}
+      <div className="mb-3 flex h-2 gap-[2px] overflow-hidden rounded-sm">
         {segmentos.map((seg, i) => {
           const pct = total > 0 ? (seg.valor / total) * 100 : 0;
           return (
             <div
               key={seg.label}
+              className="rounded-sm"
               style={{
                 width: montado ? `${pct}%` : '0%',
                 backgroundColor: seg.color,

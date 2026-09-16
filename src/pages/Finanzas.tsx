@@ -134,10 +134,10 @@ export default function Finanzas() {
         Resumen, jornales, compras e inventario de insumos de toda la finca
       </p>
 
-      <div className="mb-5 flex gap-2">
+      <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setTab('resumen')}
-          className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition"
+          className="flex h-10 flex-none items-center gap-1.5 rounded-xl px-3.5 text-sm font-medium whitespace-nowrap transition"
           style={
             tab === 'resumen'
               ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
@@ -149,7 +149,7 @@ export default function Finanzas() {
         </button>
         <button
           onClick={() => setTab('jornales')}
-          className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition"
+          className="flex h-10 flex-none items-center gap-1.5 rounded-xl px-3.5 text-sm font-medium whitespace-nowrap transition"
           style={
             tab === 'jornales'
               ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
@@ -161,7 +161,7 @@ export default function Finanzas() {
         </button>
         <button
           onClick={() => setTab('compras')}
-          className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition"
+          className="flex h-10 flex-none items-center gap-1.5 rounded-xl px-3.5 text-sm font-medium whitespace-nowrap transition"
           style={
             tab === 'compras'
               ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
@@ -169,11 +169,11 @@ export default function Finanzas() {
           }
         >
           <IconTag className="h-4 w-4" />
-          Compras de insumos
+          Compras
         </button>
         <button
           onClick={() => setTab('inventario')}
-          className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition"
+          className="flex h-10 flex-none items-center gap-1.5 rounded-xl px-3.5 text-sm font-medium whitespace-nowrap transition"
           style={
             tab === 'inventario'
               ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }

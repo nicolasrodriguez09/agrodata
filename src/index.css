@@ -52,6 +52,19 @@
   --peligro-suave: #f6e3da;
   --aviso: #a1701f;
   --aviso-suave: #f7ead2;
+
+  /* --- Paleta de gráficas ---
+     Los colores de marca (verde bosque #1f4620 contra óxido #b4552f) no sirven
+     para series de datos: el par falla daltonismo protán con ΔE 4.0, que es la
+     colisión rojo-verde clásica — un lector daltónico no distingue "ventas" de
+     "gastos". Estos pasos se eligieron corriendo el validador de la guía de
+     visualización contra la superficie real (#fbfaf2), no a ojo:
+     ΔE protán 19.0 y visión normal 27.3 entre las dos primeras. */
+  --serie-1: #1f6ba8; /* ingresos */
+  --serie-2: #c2542a; /* costos */
+  --serie-3: #1b8f74; /* tercera serie */
+  --grafica-grid: #e2e0d2;
+  --grafica-eje: #b9b6a4;
 }
 
 .dark {
@@ -82,6 +95,14 @@
   --peligro-suave: #3a2016;
   --aviso: #e0a458;
   --aviso-suave: #33280f;
+
+  /* Pasos propios para la superficie oscura (#182018), validados aparte: un
+     volteo automático de los claros se sale de la banda de luminosidad. */
+  --serie-1: #3f8fd0;
+  --serie-2: #d66a42;
+  --serie-3: #25a888;
+  --grafica-grid: #2c3429;
+  --grafica-eje: #4a5346;
 }
 
 html,
