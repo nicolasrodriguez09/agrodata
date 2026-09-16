@@ -12,7 +12,7 @@ import InfoDialog from './ui/InfoDialog';
 export default function EstadoSincronizacion() {
   const [enLinea, setEnLinea] = useState(navigator.onLine);
   const [subiendo, setSubiendo] = useState(false);
-  const [fotos, setFotos] = useState(cantidadFotosPendientes());
+  const [fotos, setFotos] = useState(0);
   const [explicacion, setExplicacion] = useState(false);
 
   useEffect(() => {
@@ -26,12 +26,20 @@ export default function EstadoSincronizacion() {
     };
   }, []);
 
-  // La cola de fotos vive en localStorage; cloudinary.ts avisa cuando cambia.
+  // La cola de fotos vive en IndexedDB, que se consulta de forma asíncrona;
+  // colaFotos.ts avisa por evento cada vez que la cola cambia.
   useEffect(() => {
-    const revisar = () => setFotos(cantidadFotosPendientes());
+    let vigente = true;
+    const revisar = () => {
+      cantidadFotosPendientes().then((n) => {
+        if (vigente) setFotos(n);
+      });
+    };
+    revisar();
     window.addEventListener('agrodata:fotos-pendientes', revisar);
     const reloj = setInterval(revisar, 4000);
     return () => {
+      vigente = false;
       window.removeEventListener('agrodata:fotos-pendientes', revisar);
       clearInterval(reloj);
     };

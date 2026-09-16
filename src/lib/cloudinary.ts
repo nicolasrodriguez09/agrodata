@@ -1,49 +1,22 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { escribir } from './escrituraOffline';
+import { encolarFoto, listarFotos, borrarFoto, contarFotos, type DestinoFoto } from './colaFotos';
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
-const PENDING_KEY = 'agrodata_fotos_pendientes';
 
-interface DestinoFoto {
-  coleccion: string;
-  docId: string;
-  campo: string;
-}
+export type { DestinoFoto };
 
-interface FotoPendiente extends DestinoFoto {
-  id: string;
-  dataUrl: string;
-  creadoEn: number;
-}
-
-function leerPendientes(): FotoPendiente[] {
-  try {
-    return JSON.parse(localStorage.getItem(PENDING_KEY) ?? '[]');
-  } catch {
-    return [];
-  }
-}
-
-function guardarPendientes(items: FotoPendiente[]) {
-  localStorage.setItem(PENDING_KEY, JSON.stringify(items));
-  // Avisa al indicador de sincronización del header que la cola cambió.
-  window.dispatchEvent(new Event('agrodata:fotos-pendientes'));
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function subirDataUrl(dataUrl: string): Promise<string> {
+/**
+ * Cloudinary acepta el archivo directo en el FormData, sin pasarlo a base64.
+ * Antes se convertía a texto para poder guardarlo en localStorage; ya no hace
+ * falta, y así se sube un 33% menos de bytes.
+ */
+async function subirArchivo(archivo: Blob): Promise<string> {
   const form = new FormData();
-  form.append('file', dataUrl);
+  form.append('file', archivo);
   form.append('upload_preset', UPLOAD_PRESET);
 
   const res = await fetch(UPLOAD_URL, { method: 'POST', body: form });
@@ -52,54 +25,57 @@ async function subirDataUrl(dataUrl: string): Promise<string> {
   return data.secure_url as string;
 }
 
-function encolarPendiente(dataUrl: string, destino: DestinoFoto) {
-  const pendientes = leerPendientes();
-  pendientes.push({ id: crypto.randomUUID(), dataUrl, creadoEn: Date.now(), ...destino });
-  guardarPendientes(pendientes);
-}
-
 /**
- * Sube una foto (de factura u otro documento) y la asocia al campo indicado
- * del documento de Firestore. Si no hay conexión o falla la subida, la deja
- * en una cola local y se reintenta sola con reintentarPendientes() cuando
- * vuelve la señal — el documento igual queda creado, solo el campo de foto
- * se completa después.
+ * Sube una foto (de factura u otro documento) y la asocia al campo indicado del
+ * documento de Firestore. Si no hay señal o la subida falla, la deja en la cola
+ * de IndexedDB y se reintenta sola con reintentarPendientes() cuando vuelve el
+ * internet — el registro igual queda creado, solo la foto se completa después.
+ *
+ * Nunca lanza: el registro ya está guardado cuando esto corre, así que un
+ * problema con la foto no debe mostrarse como "no se pudo guardar" ni empujar a
+ * registrar la compra dos veces. Devuelve la URL si subió, o null si quedó en cola.
  */
 export async function subirFoto(file: File, destino: DestinoFoto): Promise<string | null> {
-  const dataUrl = await fileToDataUrl(file);
-
-  if (!navigator.onLine) {
-    encolarPendiente(dataUrl, destino);
-    return null;
+  if (navigator.onLine) {
+    try {
+      const url = await subirArchivo(file);
+      escribir(updateDoc(doc(db, destino.coleccion, destino.docId), { [destino.campo]: url }));
+      return url;
+    } catch {
+      // Sigue abajo y la deja en cola.
+    }
   }
 
   try {
-    const url = await subirDataUrl(dataUrl);
-    await updateDoc(doc(db, destino.coleccion, destino.docId), { [destino.campo]: url });
-    return url;
-  } catch {
-    encolarPendiente(dataUrl, destino);
-    return null;
+    await encolarFoto(file, destino);
+  } catch (err) {
+    console.error('[agrodata] no se pudo guardar la foto en la cola:', err);
   }
+  return null;
 }
 
-export function cantidadFotosPendientes(): number {
-  return leerPendientes().length;
+export function cantidadFotosPendientes(): Promise<number> {
+  return contarFotos();
 }
 
-/** Reintenta subir todas las fotos guardadas localmente. Llamar al volver la conexión. */
+/** Reintenta subir todas las fotos que quedaron en cola. Se llama al volver la conexión. */
 export async function reintentarPendientes(): Promise<void> {
-  const pendientes = leerPendientes();
-  if (pendientes.length === 0) return;
+  if (!navigator.onLine) return;
+  let pendientes: Awaited<ReturnType<typeof listarFotos>>;
+  try {
+    pendientes = await listarFotos();
+  } catch {
+    return;
+  }
 
-  const siguenPendientes: FotoPendiente[] = [];
   for (const foto of pendientes) {
     try {
-      const url = await subirDataUrl(foto.dataUrl);
-      await updateDoc(doc(db, foto.coleccion, foto.docId), { [foto.campo]: url });
+      const url = await subirArchivo(foto.archivo);
+      escribir(updateDoc(doc(db, foto.coleccion, foto.docId), { [foto.campo]: url }));
+      // Solo se saca de la cola si subió: si falla, se reintenta la próxima vez.
+      await borrarFoto(foto.id);
     } catch {
-      siguenPendientes.push(foto);
+      // Se queda en la cola para el siguiente intento.
     }
   }
-  guardarPendientes(siguenPendientes);
 }
