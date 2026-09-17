@@ -284,7 +284,7 @@ export default function Lotes() {
           <EmptyState
             icon={<IconMap className="h-6 w-6" />}
             title="Todavía no registraste ninguna finca ni lote"
-            description="Creá tu primera finca, o directamente un lote suelto si preferís empezar por ahí."
+            description="Crea tu primera finca, o directamente un lote suelto si prefieres empezar por ahí."
             action={
               <Link
                 to="/fincas"

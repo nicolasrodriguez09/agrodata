@@ -255,7 +255,7 @@ export default function Reporte() {
           Generar reporte
         </h1>
         <p className="mb-4 text-sm" style={{ color: 'var(--text-dim)' }}>
-          Armá un consolidado imprimible o en Excel para un crédito o un auditor.
+          Arma un consolidado imprimible o en Excel para un crédito o un auditor.
         </p>
 
         <div
