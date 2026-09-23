@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Cosecha } from '../types/models';
 import { escribir } from './escrituraOffline';
@@ -24,28 +24,39 @@ export interface DatosCosecha {
   cicloId: string;
   fecha: string;
   cantidad: string;
+  cantidadNum?: number;
+  unidad?: string;
   calidad?: string;
   creadoPor: string;
 }
 
-export async function crearCosecha(data: DatosCosecha) {
-  escribir(addDoc(collection(db, 'cosechas'), {
-    loteId: data.loteId,
-    cicloId: data.cicloId,
-    fecha: data.fecha,
-    cantidad: data.cantidad.trim(),
-    calidad: data.calidad || null,
-    creadoPor: data.creadoPor,
-  }));
+/** Devuelve el id generado localmente, para poder enlazarla con su venta. */
+export function crearCosecha(data: DatosCosecha): string {
+  const ref = doc(collection(db, 'cosechas'));
+  escribir(
+    setDoc(ref, {
+      loteId: data.loteId,
+      cicloId: data.cicloId,
+      fecha: data.fecha,
+      cantidad: data.cantidad.trim(),
+      cantidadNum: data.cantidadNum ?? null,
+      unidad: data.unidad ?? null,
+      calidad: data.calidad || null,
+      creadoPor: data.creadoPor,
+    }),
+  );
+  return ref.id;
 }
 
 export async function actualizarCosecha(
   id: string,
-  data: Pick<DatosCosecha, 'fecha' | 'cantidad' | 'calidad'>,
+  data: Pick<DatosCosecha, 'fecha' | 'cantidad' | 'cantidadNum' | 'unidad' | 'calidad'>,
 ) {
   escribir(updateDoc(doc(db, 'cosechas', id), {
     fecha: data.fecha,
     cantidad: data.cantidad.trim(),
+    cantidadNum: data.cantidadNum ?? null,
+    unidad: data.unidad ?? null,
     calidad: data.calidad || null,
   }));
 }

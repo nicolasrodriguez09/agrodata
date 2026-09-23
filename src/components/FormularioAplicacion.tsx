@@ -7,6 +7,7 @@ import SelectorInsumo from './finanzas/SelectorInsumo';
 import type { Aplicacion, InsumoInventario } from '../types/models';
 import { hoyISO } from '../lib/fechas';
 import { formatoCantidad } from '../lib/cantidades';
+import { mensajeParaUsuario } from '../lib/errores';
 
 interface Props {
   loteId: string;
@@ -41,7 +42,12 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
 
   const insumoSeleccionado = insumos.find((i) => i.id === insumoId) ?? null;
   const cantidadNum = Number(cantidad) || 0;
-  const dejaStockNegativo = !!insumoSeleccionado && cantidadNum > insumoSeleccionado.stockActual;
+  const cantidadPrevia =
+    aplicacionExistente && typeof aplicacionExistente.cantidad === 'number' && aplicacionExistente.insumoId === insumoId
+      ? aplicacionExistente.cantidad
+      : 0;
+  const disponible = (insumoSeleccionado?.stockActual ?? 0) + cantidadPrevia;
+  const noAlcanza = !!insumoSeleccionado && cantidadNum > disponible;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -78,8 +84,8 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
       }
       onGuardado();
       onCerrar();
-    } catch {
-      setError('No se pudo guardar. Intenta de nuevo.');
+    } catch (err) {
+      setError(mensajeParaUsuario(err, 'No se pudo guardar. Intenta de nuevo.'));
     } finally {
       setGuardando(false);
     }
@@ -93,7 +99,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
     <div className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-h-[90vh] overflow-y-auto rounded-t-2xl p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
+        className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-2xl p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
         style={{ backgroundColor: 'var(--surface)' }}
       >
         <h2 className="font-serif mb-4 text-lg font-semibold" style={{ color: 'var(--text)' }}>
@@ -135,10 +141,22 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
           className={campo}
           style={campoEstilo}
         />
-        {dejaStockNegativo && (
-          <p className="-mt-2.5 mb-4 text-xs" style={{ color: '#b4552f' }}>
-            Vas a dejar el stock en negativo — puede que falte registrar una compra.
-          </p>
+        {/* Bloqueo, no advertencia: un stock negativo significa haber aplicado
+            algo que nunca entró, y en producción eso descuadra el inventario y
+            el costo del lote. Se corta acá y se dice qué hacer. */}
+        {noAlcanza && (
+          <div
+            className="-mt-2.5 mb-4 rounded-xl border px-3.5 py-3"
+            style={{ borderColor: 'var(--peligro)', backgroundColor: 'var(--peligro-suave)' }}
+          >
+            <p className="text-sm font-medium" style={{ color: 'var(--peligro)' }}>
+              No alcanza el inventario
+            </p>
+            <p className="mt-0.5 text-xs" style={{ color: 'var(--text)' }}>
+              Hay {formatoCantidad(disponible)} {insumoSeleccionado!.unidad} y estás aplicando{' '}
+              {formatoCantidad(cantidadNum)}. Registra primero la compra en Finanzas → Compras.
+            </p>
+          </div>
         )}
 
         <label className={label} style={{ color: 'var(--text)' }}>
@@ -199,7 +217,7 @@ export default function FormularioAplicacion({ loteId, cicloId, aplicacionExiste
           </button>
           <button
             type="submit"
-            disabled={guardando}
+            disabled={guardando || noAlcanza}
             className="flex-1 rounded-xl py-3 text-sm font-medium disabled:opacity-60"
             style={{ backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }}
           >

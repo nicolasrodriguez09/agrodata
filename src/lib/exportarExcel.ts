@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { formatoCantidadAplicacion } from './aplicaciones';
-import type { Aplicacion, CompraInsumo, Cosecha, Jornal, Riego, Venta } from '../types/models';
+import type { Aplicacion, CompraInsumo, Cosecha, Jornal, Novedad, Riego, Venta } from '../types/models';
 import { hoyISO } from './fechas';
 
 export interface DatosReporteExcel {
@@ -11,6 +11,7 @@ export interface DatosReporteExcel {
   aplicaciones: Aplicacion[];
   cosechas: Cosecha[];
   riegos: Riego[];
+  novedades: Novedad[];
   ventas: Venta[];
   compras: CompraInsumo[];
   jornales: Jornal[];
@@ -380,6 +381,29 @@ export async function exportarExcel(datos: DatosReporteExcel) {
     ]),
   });
 
+  // --- Novedades: el contexto que explica los números ---
+  agregarHoja(workbook, datos, {
+    nombre: 'Novedades',
+    colorPestana: 'FFA1701F',
+    apaisada: true,
+    encabezados: [
+      { titulo: 'Cuándo pasó', ancho: 14, fecha: true },
+      { titulo: 'Anotada el', ancho: 14, fecha: true },
+      { titulo: 'Tipo', ancho: 20 },
+      { titulo: 'Qué pasó', ancho: 60 },
+      { titulo: 'Estado', ancho: 16, estado: true },
+      { titulo: 'Lote', ancho: 26 },
+    ],
+    filas: datos.novedades.map((n) => [
+      fechaExcel(n.fecha),
+      n.creadoEn ? new Date(n.creadoEn) : '',
+      n.categoria,
+      n.descripcion,
+      n.resuelta ? 'Resuelta' : 'Pendiente',
+      datos.nombreLote(n.loteId),
+    ]),
+  });
+
   // --- Ventas ---
   const { refTotal: totalVentas } = agregarHoja(workbook, datos, {
     nombre: 'Ventas',
@@ -488,6 +512,7 @@ export async function exportarExcel(datos: DatosReporteExcel) {
   agregarAlIndice('Aplicaciones', datos.aplicaciones.length, totalAplicaciones);
   agregarAlIndice('Cosechas', datos.cosechas.length, null);
   agregarAlIndice('Riegos', datos.riegos.length, null);
+  agregarAlIndice('Novedades', datos.novedades.length, null);
   agregarAlIndice('Ventas', datos.ventas.length, totalVentas);
   agregarAlIndice('Compras', datos.compras.length, totalCompras);
   agregarAlIndice('Jornales', datos.jornales.length, totalJornales);

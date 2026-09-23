@@ -49,7 +49,13 @@ export interface Cosecha {
   loteId: string;
   cicloId: string;
   fecha: string;
+  /** Texto para mostrar ("850 kg", "37 canastillas"); se arma desde los dos campos de abajo. */
   cantidad: string;
+  /** Cantidad como número y en qué unidad se midió (ver lib/unidadesCosecha.ts).
+   *  Opcionales porque los registros viejos solo tienen el texto. Con esto se
+   *  pueden sacar kilos por hectárea y costo por kilo de verdad. */
+  cantidadNum?: number;
+  unidad?: string;
   calidad?: string;
   creadoPor: string;
 }
@@ -71,9 +77,43 @@ export interface Venta {
   cicloId: string;
   fecha: string;
   cantidad: string;
+  /** Precio TOTAL de la venta. Sigue siendo la fuente de verdad para las
+   *  finanzas: los registros viejos solo tienen esto. */
   precio: number;
+  /** Desglose opcional: el total sale de cantidadNum × precioUnitario en vez de
+   *  que alguien lo multiplique de cabeza en el campo. */
+  cantidadNum?: number;
+  unidad?: string;
+  precioUnitario?: number;
   comprador?: string;
   cobrado: boolean;
+  /** Cosecha de la que salió esta venta, si se registraron juntas. */
+  cosechaId?: string;
+  creadoPor: string;
+}
+
+/**
+ * Algo que pasó en el ciclo y explica los números: no se pudo regar porque no
+ * hubo agua, se cayó un palo, hubo granizada, se atrasó la fumigación.
+ *
+ * Sin esto, un ciclo con mala cosecha se ve idéntico a uno mal manejado. Es lo
+ * que le permite a Freddy —y a un banco— entender por qué un lote rindió menos.
+ */
+export interface Novedad {
+  id: string;
+  loteId: string;
+  cicloId: string;
+  fecha: string;
+  categoria: string;
+  descripcion: string;
+  /** Si ya se resolvió o sigue afectando al ciclo. */
+  resuelta: boolean;
+  /**
+   * Cuándo se escribió la novedad, que no es lo mismo que cuándo pasó: se puede
+   * anotar el lunes algo que pasó el sábado. Para que sirva de respaldo ante un
+   * banco o un seguro, tiene que constar cuándo quedó registrada.
+   */
+  creadoEn: number;
   creadoPor: string;
 }
 

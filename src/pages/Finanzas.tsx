@@ -16,7 +16,7 @@ import DetalleInsumo from '../components/finanzas/DetalleInsumo';
 import { IconTag, IconUsers, IconWallet, IconPlus, IconSearch, IconChart, IconBox } from '../components/ui/Icons';
 import VerMas from '../components/ui/VerMas';
 import { usePaginacion } from '../lib/usePaginacion';
-import { formatoCantidad } from '../lib/cantidades';
+import PanelInventario from '../components/finanzas/PanelInventario';
 
 type Tab = 'resumen' | 'jornales' | 'compras' | 'inventario';
 
@@ -138,7 +138,7 @@ export default function Finanzas() {
         Resumen, jornales, compras e inventario de insumos de toda la finca
       </p>
 
-      <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+      <div className="carrusel mb-5 flex gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setTab('resumen')}
           className="flex h-10 flex-none items-center gap-1.5 rounded-xl px-3.5 text-sm font-medium whitespace-nowrap transition"
@@ -458,45 +458,7 @@ export default function Finanzas() {
             />
           ) : (
             <>
-              <p className="mb-3 text-sm" style={{ color: 'var(--text-dim)' }}>
-                <b style={{ color: 'var(--text)' }}>{insumos.length}</b> {insumos.length === 1 ? 'insumo' : 'insumos'} ·
-                valor total en stock{' '}
-                <b style={{ color: 'var(--text)' }}>
-                  $ {insumos.reduce((s, i) => s + i.stockActual * i.costoUnitario, 0).toLocaleString('es-CO')}
-                </b>
-              </p>
-              <div className="flex flex-col gap-2">
-                {insumos.map((i) => (
-                  <button
-                    key={i.id}
-                    type="button"
-                    onClick={() => setInsumoSeleccionado(i)}
-                    className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition hover:brightness-95 active:scale-[0.99]"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
-                  >
-                    <div
-                      className="flex h-10 w-10 flex-none items-center justify-center rounded-lg"
-                      style={{ backgroundColor: 'var(--bg)', color: i.stockActual < 0 ? '#b4552f' : 'var(--text-dim)' }}
-                    >
-                      <IconBox className="h-4.5 w-4.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-serif font-semibold" style={{ color: 'var(--text)' }}>
-                          {i.nombre}
-                        </p>
-                        <p className="flex-none font-medium" style={{ color: i.stockActual < 0 ? '#b4552f' : 'var(--text)' }}>
-                          {formatoCantidad(i.stockActual)} {i.unidad}
-                        </p>
-                      </div>
-                      <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                        $ {i.costoUnitario.toLocaleString('es-CO')} / {i.unidad.replace(/s$/, '')} · valor en stock $
-                        {(i.stockActual * i.costoUnitario).toLocaleString('es-CO')}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <PanelInventario insumos={insumos} onAbrirInsumo={setInsumoSeleccionado} />
             </>
           )}
         </>

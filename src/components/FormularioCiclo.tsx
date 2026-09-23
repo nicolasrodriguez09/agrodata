@@ -35,7 +35,7 @@ export default function FormularioCiclo({ loteId, onCerrar }: Props) {
     <div className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center">
       <form
         onSubmit={handleSubmit}
-        className="w-full rounded-t-2xl p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
+        className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-2xl p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
         style={{ backgroundColor: 'var(--surface)' }}
       >
         <h2 className="font-serif mb-1 text-lg font-semibold" style={{ color: 'var(--text)' }}>

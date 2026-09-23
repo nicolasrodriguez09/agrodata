@@ -8,13 +8,15 @@ import { escucharAplicacionesDeCiclo, formatoCantidadAplicacion } from '../lib/a
 import { escucharCosechasDeCiclo } from '../lib/cosechas';
 import { escucharVentasDeCiclo } from '../lib/ventas';
 import { escucharRiegosDeCiclo } from '../lib/riegos';
-import type { Aplicacion, Ciclo, Cosecha, Finca, Lote, Riego, Venta } from '../types/models';
+import { escucharNovedadesDeCiclo } from '../lib/novedades';
+import type { Aplicacion, Ciclo, Cosecha, Finca, Lote, Novedad, Riego, Venta } from '../types/models';
 import FormularioLote from '../components/FormularioLote';
 import FormularioCiclo from '../components/FormularioCiclo';
 import FormularioAplicacion from '../components/FormularioAplicacion';
 import FormularioCosecha from '../components/FormularioCosecha';
 import FormularioVenta from '../components/FormularioVenta';
 import FormularioRiego from '../components/FormularioRiego';
+import FormularioNovedad from '../components/FormularioNovedad';
 import CalendarioActividad from '../components/CalendarioActividad';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoDialog from '../components/ui/InfoDialog';
@@ -23,8 +25,8 @@ import {
   IconArrowLeft,
   IconDroplet,
   IconBasket,
-  IconTag,
   IconWaves,
+  IconAlert,
   IconPencil,
   IconSearch,
   IconFileText,
@@ -32,9 +34,9 @@ import {
 
 const acciones = [
   { id: 'aplicacion', label: 'Aplicación de insumo', Icon: IconDroplet },
-  { id: 'cosecha', label: 'Registrar cosecha', Icon: IconBasket },
+  { id: 'cosecha', label: 'Cosecha y venta', Icon: IconBasket },
   { id: 'riego', label: 'Registrar riego', Icon: IconWaves },
-  { id: 'venta', label: 'Registrar venta', Icon: IconTag },
+  { id: 'novedad', label: 'Registrar novedad', Icon: IconAlert },
 ] as const;
 
 export default function LoteDetalle() {
@@ -51,19 +53,21 @@ export default function LoteDetalle() {
   const [refreshTick, setRefreshTick] = useState(0);
   const [mostrarFormAplicacion, setMostrarFormAplicacion] = useState(false);
   const [mostrarFormCosecha, setMostrarFormCosecha] = useState(false);
-  const [mostrarFormVenta, setMostrarFormVenta] = useState(false);
   const [mostrarFormRiego, setMostrarFormRiego] = useState(false);
+  const [mostrarFormNovedad, setMostrarFormNovedad] = useState(false);
   const [editandoAplicacion, setEditandoAplicacion] = useState<Aplicacion | null>(null);
   const [editandoCosecha, setEditandoCosecha] = useState<Cosecha | null>(null);
   const [editandoRiego, setEditandoRiego] = useState<Riego | null>(null);
+  const [editandoNovedad, setEditandoNovedad] = useState<Novedad | null>(null);
   const [editandoVenta, setEditandoVenta] = useState<Venta | null>(null);
   const [avisoSinCiclo, setAvisoSinCiclo] = useState(false);
   const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([]);
   const [cosechas, setCosechas] = useState<Cosecha[]>([]);
   const [riegos, setRiegos] = useState<Riego[]>([]);
+  const [novedades, setNovedades] = useState<Novedad[]>([]);
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [filtroTexto, setFiltroTexto] = useState('');
-  const [filtroTipo, setFiltroTipo] = useState<'todo' | 'aplicacion' | 'cosecha' | 'riego'>('todo');
+  const [filtroTipo, setFiltroTipo] = useState<'todo' | 'aplicacion' | 'cosecha' | 'riego' | 'novedad'>('todo');
   const [vistaHistorial, setVistaHistorial] = useState<'lista' | 'calendario'>('lista');
 
   useEffect(() => {
@@ -125,6 +129,14 @@ export default function LoteDetalle() {
 
   useEffect(() => {
     if (!cicloSeleccionadoId) {
+      setNovedades([]);
+      return;
+    }
+    return escucharNovedadesDeCiclo(cicloSeleccionadoId, setNovedades);
+  }, [cicloSeleccionadoId]);
+
+  useEffect(() => {
+    if (!cicloSeleccionadoId) {
       setVentas([]);
       return;
     }
@@ -170,7 +182,7 @@ export default function LoteDetalle() {
     if (id === 'aplicacion') setMostrarFormAplicacion(true);
     if (id === 'cosecha') setMostrarFormCosecha(true);
     if (id === 'riego') setMostrarFormRiego(true);
-    if (id === 'venta') setMostrarFormVenta(true);
+    if (id === 'novedad') setMostrarFormNovedad(true);
   }
 
   async function handleBorrar() {
@@ -412,10 +424,12 @@ export default function LoteDetalle() {
           | { tipo: 'aplicacion'; id: string; fecha: string; data: Aplicacion }
           | { tipo: 'cosecha'; id: string; fecha: string; data: Cosecha }
           | { tipo: 'riego'; id: string; fecha: string; data: Riego }
+          | { tipo: 'novedad'; id: string; fecha: string; data: Novedad }
         > = [
           ...aplicaciones.map((a) => ({ tipo: 'aplicacion' as const, id: a.id, fecha: a.fecha, data: a })),
           ...cosechas.map((c) => ({ tipo: 'cosecha' as const, id: c.id, fecha: c.fecha, data: c })),
           ...riegos.map((r) => ({ tipo: 'riego' as const, id: r.id, fecha: r.fecha, data: r })),
+          ...novedades.map((n) => ({ tipo: 'novedad' as const, id: n.id, fecha: n.fecha, data: n })),
         ].sort((x, y) => y.fecha.localeCompare(x.fecha));
 
         const hayAlgo = items.length > 0;
@@ -425,6 +439,7 @@ export default function LoteDetalle() {
           if (!texto) return true;
           if (i.tipo === 'aplicacion') return i.data.producto.toLowerCase().includes(texto);
           if (i.tipo === 'cosecha') return (i.data.calidad ?? '').toLowerCase().includes(texto);
+          if (i.tipo === 'novedad') return i.data.descripcion.toLowerCase().includes(texto) || i.data.categoria.toLowerCase().includes(texto);
           return (i.data.metodo ?? '').toLowerCase().includes(texto) || i.data.responsable.toLowerCase().includes(texto);
         });
 
@@ -459,25 +474,25 @@ export default function LoteDetalle() {
 
             {!hayAlgo ? (
               <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                Todavía no hay aplicaciones, cosechas ni riegos registrados en este ciclo.
+                Todavía no hay nada registrado en este ciclo.
               </p>
             ) : vistaHistorial === 'calendario' ? (
               <CalendarioActividad aplicaciones={aplicaciones} cosechas={cosechas} riegos={riegos} />
             ) : (
               <>
-                <div className="mb-3 flex gap-2">
-                  {(['todo', 'aplicacion', 'cosecha', 'riego'] as const).map((t) => (
+                <div className="carrusel mb-3 flex gap-2 overflow-x-auto">
+                  {(['todo', 'aplicacion', 'cosecha', 'riego', 'novedad'] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setFiltroTipo(t)}
-                      className="flex h-10 items-center rounded-full px-4 text-xs font-medium"
+                      className="flex h-10 flex-none items-center rounded-full px-4 text-xs font-medium"
                       style={
                         filtroTipo === t
                           ? { backgroundColor: 'var(--gold)', color: 'var(--gold-ink)' }
                           : { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-dim)' }
                       }
                     >
-                      {t === 'todo' ? 'Todo' : t === 'aplicacion' ? 'Aplicaciones' : t === 'cosecha' ? 'Cosechas' : 'Riegos'}
+                      {t === 'todo' ? 'Todo' : t === 'aplicacion' ? 'Aplicaciones' : t === 'cosecha' ? 'Cosechas' : t === 'riego' ? 'Riegos' : 'Novedades'}
                     </button>
                   ))}
                 </div>
@@ -509,6 +524,7 @@ export default function LoteDetalle() {
                         onClick={() => {
                           if (item.tipo === 'aplicacion') setEditandoAplicacion(item.data);
                           else if (item.tipo === 'cosecha') setEditandoCosecha(item.data);
+                          else if (item.tipo === 'novedad') setEditandoNovedad(item.data);
                           else setEditandoRiego(item.data);
                         }}
                         className="flex gap-3 rounded-xl border p-3.5 text-left transition hover:brightness-95 active:scale-[0.99]"
@@ -521,13 +537,19 @@ export default function LoteDetalle() {
                               ? { backgroundColor: 'var(--recent)', color: 'var(--recent-text)' }
                               : item.tipo === 'cosecha'
                                 ? { backgroundColor: 'var(--cosecha)', color: 'var(--cosecha-text)' }
-                                : { backgroundColor: 'var(--riego)', color: 'var(--riego-text)' }
+                                : item.tipo === 'novedad'
+                                  // Las novedades van en tono de aviso: son lo que explica un
+                                  // numero raro, y deben saltar a la vista en el historial.
+                                  ? { backgroundColor: 'var(--aviso-suave)', color: 'var(--aviso)' }
+                                  : { backgroundColor: 'var(--riego)', color: 'var(--riego-text)' }
                           }
                         >
                           {item.tipo === 'aplicacion' ? (
                             <IconDroplet className="h-4.5 w-4.5" />
                           ) : item.tipo === 'cosecha' ? (
                             <IconBasket className="h-4.5 w-4.5" />
+                          ) : item.tipo === 'novedad' ? (
+                            <IconAlert className="h-4.5 w-4.5" />
                           ) : (
                             <IconWaves className="h-4.5 w-4.5" />
                           )}
@@ -539,7 +561,9 @@ export default function LoteDetalle() {
                                 ? item.data.producto
                                 : item.tipo === 'cosecha'
                                   ? `Cosecha: ${item.data.cantidad}`
-                                  : `Riego${item.data.metodo ? `: ${item.data.metodo}` : ''}`}
+                                  : item.tipo === 'novedad'
+                                    ? `Novedad: ${item.data.categoria}`
+                                    : `Riego${item.data.metodo ? `: ${item.data.metodo}` : ''}`}
                             </p>
                             <p className="flex-none text-xs" style={{ color: 'var(--text-dim)' }}>
                               {formatoFecha(item.fecha)}
@@ -549,8 +573,10 @@ export default function LoteDetalle() {
                             {item.tipo === 'aplicacion'
                               ? `${formatoCantidadAplicacion(item.data)}${item.data.dosis ? ` · ${item.data.dosis}` : ''} · aplicó ${item.data.responsable}`
                               : item.tipo === 'cosecha'
-                                ? (item.data.calidad ?? 'Sin clasificar')
-                                : `${item.data.duracion ? `${item.data.duracion} · ` : ''}regó ${item.data.responsable}`}
+                                ? `${item.data.calidad ?? 'Sin clasificar'}${ventas.some((v) => v.cosechaId === item.data.id) ? ' · vendida' : ' · sin vender todavía'}`
+                                : item.tipo === 'novedad'
+                                  ? `${item.data.descripcion}${item.data.resuelta ? ' · resuelta' : ' · sigue afectando'}`
+                                  : `${item.data.duracion ? `${item.data.duracion} · ` : ''}regó ${item.data.responsable}`}
                           </p>
                         </div>
                         <IconPencil
@@ -668,19 +694,28 @@ export default function LoteDetalle() {
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />
       )}
-      {mostrarFormVenta && cicloActivo && (
-        <FormularioVenta
-          loteId={lote.id}
-          cicloId={cicloActivo.id}
-          onCerrar={() => setMostrarFormVenta(false)}
-          onGuardado={() => setRefreshTick((t) => t + 1)}
-        />
-      )}
       {mostrarFormRiego && cicloActivo && (
         <FormularioRiego
           loteId={lote.id}
           cicloId={cicloActivo.id}
           onCerrar={() => setMostrarFormRiego(false)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
+      {mostrarFormNovedad && cicloActivo && (
+        <FormularioNovedad
+          loteId={lote.id}
+          cicloId={cicloActivo.id}
+          onCerrar={() => setMostrarFormNovedad(false)}
+          onGuardado={() => setRefreshTick((t) => t + 1)}
+        />
+      )}
+      {editandoNovedad && (
+        <FormularioNovedad
+          loteId={editandoNovedad.loteId}
+          cicloId={editandoNovedad.cicloId}
+          novedadExistente={editandoNovedad}
+          onCerrar={() => setEditandoNovedad(null)}
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />
       )}
@@ -698,6 +733,7 @@ export default function LoteDetalle() {
           loteId={editandoCosecha.loteId}
           cicloId={editandoCosecha.cicloId}
           cosechaExistente={editandoCosecha}
+          yaVendida={ventas.some((v) => v.cosechaId === editandoCosecha.id)}
           onCerrar={() => setEditandoCosecha(null)}
           onGuardado={() => setRefreshTick((t) => t + 1)}
         />

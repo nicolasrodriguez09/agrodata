@@ -1,6 +1,6 @@
 import { collection, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
-import { registrarSalida, revertirSalida } from './insumos';
+import { registrarSalida, revertirSalida, verificarStock } from './insumos';
 import type { Aplicacion } from '../types/models';
 import { escribir } from './escrituraOffline';
 
@@ -54,6 +54,11 @@ export interface DatosAplicacion {
 }
 
 export async function crearAplicacion(data: DatosAplicacion) {
+  // La comprobación va PRIMERO, antes de escribir la aplicación: si se escribe
+  // y después falla el descuento, queda una aplicación huérfana que el libro de
+  // inventario nunca va a poder cuadrar.
+  await verificarStock(data.insumoId, data.cantidad);
+
   const costoEstimado = data.cantidad * data.costoUnitario;
   // ID generado en el teléfono: registrarSalida lo necesita y no puede esperar
   // la confirmación del servidor, que sin señal no llega nunca.
@@ -86,6 +91,15 @@ export async function actualizarAplicacion(
   aplicacionExistente: Aplicacion,
   data: Pick<DatosAplicacion, 'insumoId' | 'producto' | 'dosis' | 'cantidad' | 'unidad' | 'costoUnitario' | 'fecha' | 'responsable'>,
 ) {
+  // Igual que al crear: comprobar antes de tocar nada. Si es el mismo insumo,
+  // lo que esta aplicación ya tenía descontado cuenta como disponible.
+  const cantidadPrevia = typeof aplicacionExistente.cantidad === 'number' ? aplicacionExistente.cantidad : 0;
+  await verificarStock(
+    data.insumoId,
+    data.cantidad,
+    aplicacionExistente.insumoId === data.insumoId ? cantidadPrevia : 0,
+  );
+
   const costoEstimado = data.cantidad * data.costoUnitario;
   escribir(updateDoc(doc(db, 'aplicaciones', aplicacionExistente.id), {
     insumoId: data.insumoId,

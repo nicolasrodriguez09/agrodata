@@ -9,9 +9,10 @@ import { escucharJornales } from '../lib/jornales';
 import { escucharTodasLasAplicaciones, formatoCantidadAplicacion } from '../lib/aplicaciones';
 import { escucharTodasLasCosechas } from '../lib/cosechas';
 import { escucharTodosLosRiegos } from '../lib/riegos';
+import { escucharTodasLasNovedades } from '../lib/novedades';
 import AgregarUsuario from '../components/AgregarUsuario';
-import type { Aplicacion, Ciclo, CompraInsumo, Cosecha, Finca, Jornal, Lote, Riego, Venta } from '../types/models';
-import { IconSearch, IconDroplet, IconBasket, IconWaves, IconTag, IconUsers, IconFileText, IconChevronRight } from '../components/ui/Icons';
+import type { Aplicacion, Ciclo, CompraInsumo, Cosecha, Finca, Jornal, Lote, Novedad, Riego, Venta } from '../types/models';
+import { IconSearch, IconDroplet, IconBasket, IconWaves, IconTag, IconUsers, IconFileText, IconChevronRight, IconAlert } from '../components/ui/Icons';
 import { formatoFecha } from '../lib/fechas';
 import { usePaginacion } from '../lib/usePaginacion';
 import VerMas from '../components/ui/VerMas';
@@ -19,12 +20,13 @@ import VerMas from '../components/ui/VerMas';
 const COLOR_GASTO = '#b4552f';
 const SUELTO = '__suelto__';
 
-type TipoRegistro = 'todo' | 'aplicacion' | 'cosecha' | 'riego' | 'venta' | 'compra' | 'jornal';
+type TipoRegistro = 'todo' | 'aplicacion' | 'cosecha' | 'riego' | 'novedad' | 'venta' | 'compra' | 'jornal';
 const TIPOS: { id: TipoRegistro; label: string }[] = [
   { id: 'todo', label: 'Todo' },
   { id: 'aplicacion', label: 'Aplicaciones' },
   { id: 'cosecha', label: 'Cosechas' },
   { id: 'riego', label: 'Riegos' },
+  { id: 'novedad', label: 'Novedades' },
   { id: 'venta', label: 'Ventas' },
   { id: 'compra', label: 'Compras' },
   { id: 'jornal', label: 'Jornales' },
@@ -34,6 +36,7 @@ type Item =
   | { tipo: 'aplicacion'; id: string; fecha: string; data: Aplicacion }
   | { tipo: 'cosecha'; id: string; fecha: string; data: Cosecha }
   | { tipo: 'riego'; id: string; fecha: string; data: Riego }
+  | { tipo: 'novedad'; id: string; fecha: string; data: Novedad }
   | { tipo: 'venta'; id: string; fecha: string; data: Venta }
   | { tipo: 'compra'; id: string; fecha: string; data: CompraInsumo }
   | { tipo: 'jornal'; id: string; fecha: string; data: Jornal };
@@ -52,6 +55,7 @@ function cicloIdDe(item: Item): string | undefined {
     case 'aplicacion':
     case 'cosecha':
     case 'riego':
+    case 'novedad':
     case 'venta':
       return item.data.cicloId;
     default:
@@ -67,6 +71,8 @@ function camposDeTexto(item: Item): (string | undefined)[] {
       return [item.data.calidad];
     case 'riego':
       return [item.data.metodo, item.data.responsable];
+    case 'novedad':
+      return [item.data.categoria, item.data.descripcion];
     case 'venta':
       return [item.data.comprador, item.data.cantidad];
     case 'compra':
@@ -81,6 +87,7 @@ const ESTILO_TIPO: Record<TipoRegistro, { color: string; colorTexto: string; Ico
   aplicacion: { color: 'var(--recent)', colorTexto: 'var(--recent-text)', Icon: IconDroplet },
   cosecha: { color: 'var(--cosecha)', colorTexto: 'var(--cosecha-text)', Icon: IconBasket },
   riego: { color: 'var(--riego)', colorTexto: 'var(--riego-text)', Icon: IconWaves },
+  novedad: { color: 'var(--aviso)', colorTexto: '#fbfaf2', Icon: IconAlert },
   venta: { color: 'var(--gold)', colorTexto: 'var(--gold-ink)', Icon: IconTag },
   compra: { color: COLOR_GASTO, colorTexto: '#fbfaf2', Icon: IconTag },
   jornal: { color: COLOR_GASTO, colorTexto: '#fbfaf2', Icon: IconUsers },
@@ -94,6 +101,8 @@ function tituloDe(item: Item): string {
       return `Cosecha: ${item.data.cantidad}`;
     case 'riego':
       return `Riego${item.data.metodo ? `: ${item.data.metodo}` : ''}`;
+    case 'novedad':
+      return `Novedad: ${item.data.categoria}`;
     case 'venta':
       return `$ ${item.data.precio.toLocaleString('es-CO')}`;
     case 'compra':
@@ -111,6 +120,8 @@ function subtituloDe(item: Item): string {
       return item.data.calidad ?? 'Sin clasificar';
     case 'riego':
       return `${item.data.duracion ? `${item.data.duracion} · ` : ''}regó ${item.data.responsable}`;
+    case 'novedad':
+      return `${item.data.descripcion}${item.data.resuelta ? ' · resuelta' : ' · sigue afectando'}`;
     case 'venta':
       return `${item.data.cantidad}${item.data.comprador ? ` · ${item.data.comprador}` : ''}`;
     case 'compra':
@@ -143,6 +154,7 @@ export default function Admin() {
   const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([]);
   const [cosechas, setCosechas] = useState<Cosecha[]>([]);
   const [riegos, setRiegos] = useState<Riego[]>([]);
+  const [novedades, setNovedades] = useState<Novedad[]>([]);
 
   const [fincaId, setFincaId] = useState('');
   const [loteId, setLoteId] = useState('');
@@ -160,6 +172,7 @@ export default function Admin() {
   useEffect(() => escucharTodasLasAplicaciones(setAplicaciones), []);
   useEffect(() => escucharTodasLasCosechas(setCosechas), []);
   useEffect(() => escucharTodosLosRiegos(setRiegos), []);
+  useEffect(() => escucharTodasLasNovedades(setNovedades), []);
 
   useEffect(() => {
     if (!loteId) {
@@ -193,11 +206,12 @@ export default function Admin() {
         ...aplicaciones.map((a) => ({ tipo: 'aplicacion' as const, id: a.id, fecha: a.fecha, data: a })),
         ...cosechas.map((c) => ({ tipo: 'cosecha' as const, id: c.id, fecha: c.fecha, data: c })),
         ...riegos.map((r) => ({ tipo: 'riego' as const, id: r.id, fecha: r.fecha, data: r })),
+        ...novedades.map((n) => ({ tipo: 'novedad' as const, id: n.id, fecha: n.fecha, data: n })),
         ...ventas.map((v) => ({ tipo: 'venta' as const, id: v.id, fecha: v.fecha, data: v })),
         ...compras.map((c) => ({ tipo: 'compra' as const, id: c.id, fecha: c.fecha, data: c })),
         ...jornales.map((j) => ({ tipo: 'jornal' as const, id: j.id, fecha: j.fecha, data: j })),
       ].sort((a, b) => b.fecha.localeCompare(a.fecha)),
-    [aplicaciones, cosechas, riegos, ventas, compras, jornales],
+    [aplicaciones, cosechas, riegos, novedades, ventas, compras, jornales],
   );
 
   // Antes cada fila hacia lotes.find(): O(filas x lotes) en cada render.
@@ -284,7 +298,7 @@ export default function Admin() {
         />
       </div>
 
-      <div className="mb-3 flex gap-2 overflow-x-auto">
+      <div className="carrusel mb-3 flex gap-2 overflow-x-auto">
         {TIPOS.map((t) => (
           <button
             key={t.id}

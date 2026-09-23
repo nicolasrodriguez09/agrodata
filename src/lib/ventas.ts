@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Venta } from '../types/models';
 import { escribir } from './escrituraOffline';
@@ -25,32 +25,49 @@ export interface DatosVenta {
   fecha: string;
   cantidad: string;
   precio: number;
+  /** Desglose opcional; ver el comentario en types/models.ts. */
+  cantidadNum?: number;
+  unidad?: string;
+  precioUnitario?: number;
   comprador?: string;
   cobrado: boolean;
+  cosechaId?: string;
   creadoPor: string;
 }
 
-export async function crearVenta(data: DatosVenta) {
-  escribir(addDoc(collection(db, 'ventas'), {
-    loteId: data.loteId,
-    cicloId: data.cicloId,
-    fecha: data.fecha,
-    cantidad: data.cantidad.trim(),
-    precio: data.precio,
-    comprador: data.comprador?.trim() || null,
-    cobrado: data.cobrado,
-    creadoPor: data.creadoPor,
-  }));
+/** Devuelve el id generado localmente, para poder enlazar la cosecha con su venta. */
+export function crearVenta(data: DatosVenta): string {
+  const ref = doc(collection(db, 'ventas'));
+  escribir(
+    setDoc(ref, {
+      loteId: data.loteId,
+      cicloId: data.cicloId,
+      fecha: data.fecha,
+      cantidad: data.cantidad.trim(),
+      precio: data.precio,
+      cantidadNum: data.cantidadNum ?? null,
+      unidad: data.unidad ?? null,
+      precioUnitario: data.precioUnitario ?? null,
+      comprador: data.comprador?.trim() || null,
+      cobrado: data.cobrado,
+      cosechaId: data.cosechaId ?? null,
+      creadoPor: data.creadoPor,
+    }),
+  );
+  return ref.id;
 }
 
 export async function actualizarVenta(
   id: string,
-  data: Pick<DatosVenta, 'fecha' | 'cantidad' | 'precio' | 'comprador' | 'cobrado'>,
+  data: Pick<DatosVenta, 'fecha' | 'cantidad' | 'precio' | 'cantidadNum' | 'unidad' | 'precioUnitario' | 'comprador' | 'cobrado'>,
 ) {
   escribir(updateDoc(doc(db, 'ventas', id), {
     fecha: data.fecha,
     cantidad: data.cantidad.trim(),
     precio: data.precio,
+    cantidadNum: data.cantidadNum ?? null,
+    unidad: data.unidad ?? null,
+    precioUnitario: data.precioUnitario ?? null,
     comprador: data.comprador?.trim() || null,
     cobrado: data.cobrado,
   }));

@@ -30,6 +30,7 @@
   --text: #1b2a1f;
   --text-dim: #5b6b57;
   --border: #c9cbb6;
+  --barra: #bcbfa6;
   --header-bg: #16221a;
   --header-text: #f4f5ea;
   --gold: #c88a2e;
@@ -73,6 +74,7 @@
   --text: #ecefdf;
   --text-dim: #98a38f;
   --border: #303829;
+  --barra: #414a38;
   --header-bg: #0a0f09;
   --header-text: #ecefdf;
   --gold: #e3ad52;
@@ -116,6 +118,43 @@ body {
   -webkit-font-smoothing: antialiased;
   background: var(--bg);
   color: var(--text);
+}
+
+/* --- Barras de desplazamiento ---
+   Las del sistema son grises y anchas: sobre una tarjeta color hueso se ven
+   como un parche pegado. Estas van del color de los bordes de la app, finas y
+   redondeadas, y solo aparecen donde de verdad hay algo que correr. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--barra) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--barra);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-dim);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Los carruseles de botones se arrastran con el dedo: la barra debajo solo
+   estorba y corta el renglon. */
+.carrusel {
+  scrollbar-width: none;
+}
+.carrusel::-webkit-scrollbar {
+  display: none;
 }
 
 .font-display {

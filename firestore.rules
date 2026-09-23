@@ -40,6 +40,7 @@ service cloud.firestore {
     match /aplicaciones/{id} { allow read, write: if esDeLaFinca(); }
     match /cosechas/{id}     { allow read, write: if esDeLaFinca(); }
     match /riegos/{id}       { allow read, write: if esDeLaFinca(); }
+    match /novedades/{id}    { allow read, write: if esDeLaFinca(); }
     match /ventas/{id}       { allow read, write: if esDeLaFinca(); }
     match /compras/{id}      { allow read, write: if esDeLaFinca(); }
     match /jornales/{id}     { allow read, write: if esDeLaFinca(); }

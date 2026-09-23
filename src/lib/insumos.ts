@@ -91,7 +91,25 @@ interface DatosSalida {
   creadoPor: string;
 }
 
-/** Salida de stock por una aplicación. No bloquea si deja el stock en negativo. */
+/**
+ * Comprueba que alcance el stock antes de descontarlo, y lanza si no.
+ *
+ * `yaDescontado` es lo que esta misma aplicación ya había sacado, para el caso
+ * de editarla: si tenía 5 litros y se cambia a 6, solo hace falta 1 más.
+ *
+ * El getDoc sale de la caché local, así que la comprobación también funciona
+ * sin señal.
+ */
+export async function verificarStock(insumoId: string, cantidad: number, yaDescontado = 0) {
+  const snap = await getDoc(doc(db, 'insumos', insumoId));
+  const insumo = snap.data() as Omit<InsumoInventario, 'id'> | undefined;
+  const disponible = (insumo?.stockActual ?? 0) + yaDescontado;
+  if (cantidad - disponible > TOLERANCIA) {
+    throw new StockInsuficiente(insumo?.nombre ?? 'Este insumo', disponible, cantidad, insumo?.unidad ?? '');
+  }
+}
+
+/** Salida de stock por una aplicación. Quien llama debe haber pasado por verificarStock. */
 export async function registrarSalida(data: DatosSalida) {
   escribir(updateDoc(doc(db, 'insumos', data.insumoId), {
     stockActual: increment(-data.cantidad),

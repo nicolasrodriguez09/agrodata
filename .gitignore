@@ -18,3 +18,4 @@ yarn-error.log*
 
 # Cache local del CLI de Firebase: se reescribe en cada despliegue
 .firebase/
+

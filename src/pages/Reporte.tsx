@@ -7,12 +7,13 @@ import { cargarResumenCiclo, type ResumenCiclo } from '../lib/resumenCiclo';
 import { escucharAplicacionesDeCiclo, escucharTodasLasAplicaciones, formatoCantidadAplicacion } from '../lib/aplicaciones';
 import { escucharCosechasDeCiclo, escucharTodasLasCosechas } from '../lib/cosechas';
 import { escucharRiegosDeCiclo, escucharTodosLosRiegos } from '../lib/riegos';
+import { escucharNovedadesDeCiclo, escucharTodasLasNovedades } from '../lib/novedades';
 import { escucharVentasDeCiclo, escucharTodasLasVentas } from '../lib/ventas';
 import { escucharCompras } from '../lib/compras';
 import { escucharJornales } from '../lib/jornales';
 import { exportarExcel } from '../lib/exportarExcel';
-import type { Aplicacion, Ciclo, CompraInsumo, Cosecha, Finca, Jornal, Lote, Riego, Venta } from '../types/models';
-import { IconArrowLeft, IconDroplet, IconBasket, IconWaves, IconTag, IconUsers } from '../components/ui/Icons';
+import type { Aplicacion, Ciclo, CompraInsumo, Cosecha, Finca, Jornal, Lote, Novedad, Riego, Venta } from '../types/models';
+import { IconArrowLeft, IconDroplet, IconBasket, IconWaves, IconTag, IconUsers, IconAlert } from '../components/ui/Icons';
 import { formatoFecha, formatoFechaLarga } from '../lib/fechas';
 
 const COLOR_GASTO = '#b4552f';
@@ -67,6 +68,7 @@ export default function Reporte() {
   const [aplicacionesCiclo, setAplicacionesCiclo] = useState<Aplicacion[]>([]);
   const [cosechasCiclo, setCosechasCiclo] = useState<Cosecha[]>([]);
   const [riegosCiclo, setRiegosCiclo] = useState<Riego[]>([]);
+  const [novedadesCiclo, setNovedadesCiclo] = useState<Novedad[]>([]);
   const [ventasCiclo, setVentasCiclo] = useState<Venta[]>([]);
 
   // --- Modo período ---
@@ -77,6 +79,7 @@ export default function Reporte() {
   const [aplicacionesTodas, setAplicacionesTodas] = useState<Aplicacion[]>([]);
   const [cosechasTodas, setCosechasTodas] = useState<Cosecha[]>([]);
   const [riegosTodos, setRiegosTodos] = useState<Riego[]>([]);
+  const [novedadesTodas, setNovedadesTodas] = useState<Novedad[]>([]);
 
   const [exportando, setExportando] = useState(false);
 
@@ -121,17 +124,20 @@ export default function Reporte() {
       setAplicacionesCiclo([]);
       setCosechasCiclo([]);
       setRiegosCiclo([]);
+      setNovedadesCiclo([]);
       setVentasCiclo([]);
       return;
     }
     const u1 = escucharAplicacionesDeCiclo(cicloId, setAplicacionesCiclo);
     const u2 = escucharCosechasDeCiclo(cicloId, setCosechasCiclo);
     const u3 = escucharRiegosDeCiclo(cicloId, setRiegosCiclo);
+    const u3b = escucharNovedadesDeCiclo(cicloId, setNovedadesCiclo);
     const u4 = escucharVentasDeCiclo(cicloId, setVentasCiclo);
     return () => {
       u1();
       u2();
       u3();
+      u3b();
       u4();
     };
   }, [modo, cicloId]);
@@ -143,12 +149,14 @@ export default function Reporte() {
     const u3 = escucharTodasLasAplicaciones(setAplicacionesTodas);
     const u4 = escucharTodasLasCosechas(setCosechasTodas);
     const u5 = escucharTodosLosRiegos(setRiegosTodos);
+    const u6 = escucharTodasLasNovedades(setNovedadesTodas);
     return () => {
       u1();
       u2();
       u3();
       u4();
       u5();
+      u6();
     };
   }, [modo]);
 
@@ -181,11 +189,13 @@ export default function Reporte() {
   const aplicacionesPeriodo = aplicacionesTodas.filter((a) => enRango(a.fecha));
   const cosechasPeriodo = cosechasTodas.filter((c) => enRango(c.fecha));
   const riegosPeriodo = riegosTodos.filter((r) => enRango(r.fecha));
+  const novedadesPeriodo = novedadesTodas.filter((x) => enRango(x.fecha));
   const jornalesPeriodo = jornalesTodos.filter((j) => enRango(j.fecha));
 
   const aplicaciones = modo === 'ciclo' ? aplicacionesCiclo : aplicacionesPeriodo;
   const cosechas = modo === 'ciclo' ? cosechasCiclo : cosechasPeriodo;
   const riegos = modo === 'ciclo' ? riegosCiclo : riegosPeriodo;
+  const novedades = modo === 'ciclo' ? novedadesCiclo : novedadesPeriodo;
   const ventas = modo === 'ciclo' ? ventasCiclo : ventasPeriodo;
   const compras = modo === 'ciclo' ? [] : comprasPeriodo;
   const jornales = modo === 'ciclo' ? jornalesCiclo : jornalesPeriodo;
@@ -208,7 +218,7 @@ export default function Reporte() {
   const retornoPct = totalInvertido > 0 ? (balance / totalInvertido) * 100 : null;
 
   const listo = modo === 'ciclo' ? !!cicloId : true;
-  const hayContenido = aplicaciones.length + cosechas.length + riegos.length + ventas.length + compras.length + jornales.length > 0;
+  const hayContenido = aplicaciones.length + cosechas.length + riegos.length + novedades.length + ventas.length + compras.length + jornales.length > 0;
 
   const alcance =
     modo === 'ciclo'
@@ -229,6 +239,7 @@ export default function Reporte() {
         aplicaciones,
         cosechas,
         riegos,
+        novedades,
         ventas,
         compras,
         jornales,
@@ -504,6 +515,28 @@ export default function Reporte() {
                         `${formatoFecha(r.fecha)} · ${r.duracion ? `${r.duracion} · ` : ''}regó ${r.responsable}${modo === 'periodo' ? ` · ${nombreLote(r.loteId)}` : ''}`,
                         null,
                         r.id,
+                      ),
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* Las novedades explican por qué un ciclo rindió lo que rindió.
+                  Sin ellas, un ciclo golpeado por el clima se ve igual a uno mal
+                  manejado — que es justo lo que un banco necesita distinguir. */}
+              {novedades.length > 0 && (
+                <>
+                  <h2 className="reporte-seccion font-display mb-2 text-[12px] font-black tracking-wider uppercase" style={{ color: 'var(--text-dim)' }}>
+                    Novedades ({novedades.length})
+                  </h2>
+                  <div className="mb-5 flex flex-col gap-2">
+                    {novedades.map((nv) =>
+                      fila(
+                        { color: 'var(--aviso)', colorTexto: '#fbfaf2', Icon: IconAlert },
+                        `${nv.categoria}${nv.resuelta ? '' : ' · sigue afectando'}`,
+                        `${formatoFecha(nv.fecha)} · ${nv.descripcion}${modo === 'periodo' ? ` · ${nombreLote(nv.loteId)}` : ''}`,
+                        null,
+                        nv.id,
                       ),
                     )}
                   </div>

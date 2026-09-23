@@ -15,7 +15,7 @@ export default function DetalleCompra({ compra, onEditar, onCerrar }: Props) {
   return (
     <div className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center" onClick={onCerrar}>
       <div
-        className="w-full max-h-[90vh] overflow-y-auto rounded-t-2xl p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
+        className="max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-t-2xl p-6 shadow-xl sm:max-w-sm sm:rounded-2xl"
         style={{ backgroundColor: 'var(--surface)' }}
         onClick={(e) => e.stopPropagation()}
       >
